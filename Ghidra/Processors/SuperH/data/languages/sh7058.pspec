@@ -1,0 +1,822 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  Renesas (Hitachi) SH7058: SH-2E core, 1 MB flash, 48 KB RAM, 16 KB on-chip peripherals.
+  Memory map, peripheral registers and exception vectors are from the SH7058 Hardware Manual
+  (Rev. 3.0, REJ09B0177).
+
+  Only vectors 0-15 are labelled at address 0. Resets always read vectors 0-3 from address 0;
+  other exceptions use VBR + 4*n, and firmware may move VBR and place code at 0x40.
+-->
+<processor_spec>
+  <programcounter register="pc"/>
+
+  <!-- On-chip peripheral space (Table 9.3) is volatile for the decompiler whatever the
+       memory block flags say. (The IO block below is also volatile.) -->
+  <volatile outputop="write_volatile" inputop="read_volatile">
+    <range space="ram" first="0xFFFFC000" last="0xFFFFFFFF"/>
+  </volatile>
+
+  <default_symbols>
+    <!-- Exception vector table, Table 6.3 / Table 7.3 -->
+    <symbol name="v_PowerOnReset_PC" address="0x00000000" size="4" entry="true" type="code_ptr" description="Vector 0 (offset 0x000): Power-on reset PC"/>
+    <symbol name="v_PowerOnReset_SP" address="0x00000004" size="4" description="Vector 1 (offset 0x004): Power-on reset SP"/>
+    <symbol name="v_ManualReset_PC" address="0x00000008" size="4" entry="true" type="code_ptr" description="Vector 2 (offset 0x008): Manual reset PC"/>
+    <symbol name="v_ManualReset_SP" address="0x0000000C" size="4" description="Vector 3 (offset 0x00C): Manual reset SP"/>
+    <symbol name="v_GeneralIllegalInstruction" address="0x00000010" size="4" entry="true" type="code_ptr" description="Vector 4 (offset 0x010): General illegal instruction"/>
+    <symbol name="v_Reserved_5" address="0x00000014" size="4" entry="true" type="code_ptr" description="Vector 5 (offset 0x014): reserved"/>
+    <symbol name="v_SlotIllegalInstruction" address="0x00000018" size="4" entry="true" type="code_ptr" description="Vector 6 (offset 0x018): Slot illegal instruction"/>
+    <symbol name="v_Reserved_7" address="0x0000001C" size="4" entry="true" type="code_ptr" description="Vector 7 (offset 0x01C): reserved"/>
+    <symbol name="v_Reserved_8" address="0x00000020" size="4" entry="true" type="code_ptr" description="Vector 8 (offset 0x020): reserved"/>
+    <symbol name="v_CPUAddressError" address="0x00000024" size="4" entry="true" type="code_ptr" description="Vector 9 (offset 0x024): CPU address error"/>
+    <symbol name="v_DMACAddressError" address="0x00000028" size="4" entry="true" type="code_ptr" description="Vector 10 (offset 0x028): DMAC address error"/>
+    <symbol name="v_NMI" address="0x0000002C" size="4" entry="true" type="code_ptr" description="Vector 11 (offset 0x02C): NMI"/>
+    <symbol name="v_UserBreak" address="0x00000030" size="4" entry="true" type="code_ptr" description="Vector 12 (offset 0x030): User break (UBC)"/>
+    <symbol name="v_FPUException" address="0x00000034" size="4" entry="true" type="code_ptr" description="Vector 13 (offset 0x034): FPU exception"/>
+    <symbol name="v_H_UDI" address="0x00000038" size="4" entry="true" type="code_ptr" description="Vector 14 (offset 0x038): H-UDI"/>
+    <symbol name="v_Reserved_15" address="0x0000003C" size="4" entry="true" type="code_ptr" description="Vector 15 (offset 0x03C): reserved"/>
+
+    <!-- On-chip peripheral registers, Appendix A Table A.1 -->
+    <!-- HCAN0 -->
+    <symbol name="MCR_0" address="0xFFFFD000" size="2" description="HCAN0 MCR (channel 0 control register)"/>
+    <symbol name="GSR_0" address="0xFFFFD002" size="2" description="HCAN0 GSR (channel 0 control register)"/>
+    <symbol name="BCR1_0" address="0xFFFFD004" size="2" description="HCAN0 BCR1 (channel 0 control register)"/>
+    <symbol name="BCR0_0" address="0xFFFFD006" size="2" description="HCAN0 BCR0 (channel 0 control register)"/>
+    <symbol name="IRR_0" address="0xFFFFD008" size="2" description="HCAN0 IRR (channel 0 control register)"/>
+    <symbol name="IMR_0" address="0xFFFFD00A" size="2" description="HCAN0 IMR (channel 0 control register)"/>
+    <symbol name="TEC_REC_0" address="0xFFFFD00C" size="2" description="HCAN0 TEC/REC (channel 0 control register)"/>
+    <symbol name="TXPR1_0" address="0xFFFFD020" size="2" description="HCAN0 TXPR1 (channel 0 control register)"/>
+    <symbol name="TXPR0_0" address="0xFFFFD022" size="2" description="HCAN0 TXPR0 (channel 0 control register)"/>
+    <symbol name="TXCR1_0" address="0xFFFFD028" size="2" description="HCAN0 TXCR1 (channel 0 control register)"/>
+    <symbol name="TXCR0_0" address="0xFFFFD02A" size="2" description="HCAN0 TXCR0 (channel 0 control register)"/>
+    <symbol name="TXACK1_0" address="0xFFFFD030" size="2" description="HCAN0 TXACK1 (channel 0 control register)"/>
+    <symbol name="TXACK0_0" address="0xFFFFD032" size="2" description="HCAN0 TXACK0 (channel 0 control register)"/>
+    <symbol name="ABACK1_0" address="0xFFFFD038" size="2" description="HCAN0 ABACK1 (channel 0 control register)"/>
+    <symbol name="ABACK0_0" address="0xFFFFD03A" size="2" description="HCAN0 ABACK0 (channel 0 control register)"/>
+    <symbol name="RXPR1_0" address="0xFFFFD040" size="2" description="HCAN0 RXPR1 (channel 0 control register)"/>
+    <symbol name="RXPR0_0" address="0xFFFFD042" size="2" description="HCAN0 RXPR0 (channel 0 control register)"/>
+    <symbol name="RFPR1_0" address="0xFFFFD048" size="2" description="HCAN0 RFPR1 (channel 0 control register)"/>
+    <symbol name="RFPR0_0" address="0xFFFFD04A" size="2" description="HCAN0 RFPR0 (channel 0 control register)"/>
+    <symbol name="MBIMR1_0" address="0xFFFFD050" size="2" description="HCAN0 MBIMR1 (channel 0 control register)"/>
+    <symbol name="MBIMR0_0" address="0xFFFFD052" size="2" description="HCAN0 MBIMR0 (channel 0 control register)"/>
+    <symbol name="UMSR1_0" address="0xFFFFD058" size="2" description="HCAN0 UMSR1 (channel 0 control register)"/>
+    <symbol name="UMSR0_0" address="0xFFFFD05A" size="2" description="HCAN0 UMSR0 (channel 0 control register)"/>
+    <symbol name="TCNTR_0" address="0xFFFFD080" size="2" description="HCAN0 TCNTR (channel 0 control register)"/>
+    <symbol name="TCR_0" address="0xFFFFD082" size="2" description="HCAN0 TCR (channel 0 control register)"/>
+    <symbol name="TSR_0" address="0xFFFFD084" size="2" description="HCAN0 TSR (channel 0 control register)"/>
+    <symbol name="TDCR_0" address="0xFFFFD086" size="2" description="HCAN0 TDCR (channel 0 control register)"/>
+    <symbol name="LOSR_0" address="0xFFFFD088" size="2" description="HCAN0 LOSR (channel 0 control register)"/>
+    <symbol name="ICR0_cc_0" address="0xFFFFD08A" size="2" description="HCAN0 input capture register for cycle counter (ICR0_cc0)"/>
+    <symbol name="ICR0_tm_0" address="0xFFFFD08C" size="2" description="HCAN0 input capture register for timer counter (ICR0_tm0)"/>
+    <symbol name="ICR1_0" address="0xFFFFD08E" size="2" description="HCAN0 ICR1 (channel 0 control register)"/>
+    <symbol name="TCMR0_0" address="0xFFFFD090" size="2" description="HCAN0 TCMR0 (channel 0 control register)"/>
+    <symbol name="TCMR1_0" address="0xFFFFD092" size="2" description="HCAN0 TCMR1 (channel 0 control register)"/>
+    <symbol name="TCMR2_0" address="0xFFFFD094" size="2" description="HCAN0 TCMR2 (channel 0 control register)"/>
+    <symbol name="CCR_0" address="0xFFFFD096" size="2" description="HCAN0 CCR (channel 0 control register)"/>
+    <symbol name="CMAX_0" address="0xFFFFD098" size="2" description="HCAN0 CMAX (channel 0 control register)"/>
+    <symbol name="TMR_0" address="0xFFFFD09A" size="2" description="HCAN0 TMR (channel 0 control register)"/>
+    <symbol name="CCR_buf_0" address="0xFFFFD09C" size="2" description="HCAN0 cycle counter double buffer (CCR_buf0)"/>
+    <symbol name="ICR0_buf_0" address="0xFFFFD09E" size="2" description="HCAN0 input capture double buffer (ICR0_buf0)"/>
+    <symbol name="HCAN0_MB0_CTRL" address="0xFFFFD100" size="6" description="HCAN0 mailbox 0 message control"/>
+    <symbol name="HCAN0_MB0_TS" address="0xFFFFD106" size="2" description="HCAN0 mailbox 0 timestamp"/>
+    <symbol name="HCAN0_MB0_DATA" address="0xFFFFD108" size="8" description="HCAN0 mailbox 0 message data 0-7"/>
+    <symbol name="HCAN0_MB0_LAFM" address="0xFFFFD110" size="4" description="HCAN0 mailbox 0 LAFM / transmit trigger time"/>
+    <symbol name="HCAN0_MB1_CTRL" address="0xFFFFD120" size="6" description="HCAN0 mailbox 1 message control"/>
+    <symbol name="HCAN0_MB1_TS" address="0xFFFFD126" size="2" description="HCAN0 mailbox 1 timestamp"/>
+    <symbol name="HCAN0_MB1_DATA" address="0xFFFFD128" size="8" description="HCAN0 mailbox 1 message data 0-7"/>
+    <symbol name="HCAN0_MB1_LAFM" address="0xFFFFD130" size="4" description="HCAN0 mailbox 1 LAFM / transmit trigger time"/>
+    <symbol name="HCAN0_MB2_CTRL" address="0xFFFFD140" size="6" description="HCAN0 mailbox 2 message control"/>
+    <symbol name="HCAN0_MB2_TS" address="0xFFFFD146" size="2" description="HCAN0 mailbox 2 timestamp"/>
+    <symbol name="HCAN0_MB2_DATA" address="0xFFFFD148" size="8" description="HCAN0 mailbox 2 message data 0-7"/>
+    <symbol name="HCAN0_MB2_LAFM" address="0xFFFFD150" size="4" description="HCAN0 mailbox 2 LAFM / transmit trigger time"/>
+    <symbol name="HCAN0_MB3_CTRL" address="0xFFFFD160" size="6" description="HCAN0 mailbox 3 message control"/>
+    <symbol name="HCAN0_MB3_TS" address="0xFFFFD166" size="2" description="HCAN0 mailbox 3 timestamp"/>
+    <symbol name="HCAN0_MB3_DATA" address="0xFFFFD168" size="8" description="HCAN0 mailbox 3 message data 0-7"/>
+    <symbol name="HCAN0_MB3_LAFM" address="0xFFFFD170" size="4" description="HCAN0 mailbox 3 LAFM / transmit trigger time"/>
+    <symbol name="HCAN0_MB4_CTRL" address="0xFFFFD180" size="6" description="HCAN0 mailbox 4 message control"/>
+    <symbol name="HCAN0_MB4_TS" address="0xFFFFD186" size="2" description="HCAN0 mailbox 4 timestamp"/>
+    <symbol name="HCAN0_MB4_DATA" address="0xFFFFD188" size="8" description="HCAN0 mailbox 4 message data 0-7"/>
+    <symbol name="HCAN0_MB4_LAFM" address="0xFFFFD190" size="4" description="HCAN0 mailbox 4 LAFM / transmit trigger time"/>
+    <symbol name="HCAN0_MB5_CTRL" address="0xFFFFD1A0" size="6" description="HCAN0 mailbox 5 message control"/>
+    <symbol name="HCAN0_MB5_TS" address="0xFFFFD1A6" size="2" description="HCAN0 mailbox 5 timestamp"/>
+    <symbol name="HCAN0_MB5_DATA" address="0xFFFFD1A8" size="8" description="HCAN0 mailbox 5 message data 0-7"/>
+    <symbol name="HCAN0_MB5_LAFM" address="0xFFFFD1B0" size="4" description="HCAN0 mailbox 5 LAFM / transmit trigger time"/>
+    <symbol name="HCAN0_MB6_CTRL" address="0xFFFFD1C0" size="6" description="HCAN0 mailbox 6 message control"/>
+    <symbol name="HCAN0_MB6_TS" address="0xFFFFD1C6" size="2" description="HCAN0 mailbox 6 timestamp"/>
+    <symbol name="HCAN0_MB6_DATA" address="0xFFFFD1C8" size="8" description="HCAN0 mailbox 6 message data 0-7"/>
+    <symbol name="HCAN0_MB6_LAFM" address="0xFFFFD1D0" size="4" description="HCAN0 mailbox 6 LAFM / transmit trigger time"/>
+    <symbol name="HCAN0_MB7_CTRL" address="0xFFFFD1E0" size="6" description="HCAN0 mailbox 7 message control"/>
+    <symbol name="HCAN0_MB7_TS" address="0xFFFFD1E6" size="2" description="HCAN0 mailbox 7 timestamp"/>
+    <symbol name="HCAN0_MB7_DATA" address="0xFFFFD1E8" size="8" description="HCAN0 mailbox 7 message data 0-7"/>
+    <symbol name="HCAN0_MB7_LAFM" address="0xFFFFD1F0" size="4" description="HCAN0 mailbox 7 LAFM / transmit trigger time"/>
+    <symbol name="HCAN0_MB8_CTRL" address="0xFFFFD200" size="6" description="HCAN0 mailbox 8 message control"/>
+    <symbol name="HCAN0_MB8_TS" address="0xFFFFD206" size="2" description="HCAN0 mailbox 8 timestamp"/>
+    <symbol name="HCAN0_MB8_DATA" address="0xFFFFD208" size="8" description="HCAN0 mailbox 8 message data 0-7"/>
+    <symbol name="HCAN0_MB8_LAFM" address="0xFFFFD210" size="4" description="HCAN0 mailbox 8 LAFM / transmit trigger time"/>
+    <symbol name="HCAN0_MB9_CTRL" address="0xFFFFD220" size="6" description="HCAN0 mailbox 9 message control"/>
+    <symbol name="HCAN0_MB9_TS" address="0xFFFFD226" size="2" description="HCAN0 mailbox 9 timestamp"/>
+    <symbol name="HCAN0_MB9_DATA" address="0xFFFFD228" size="8" description="HCAN0 mailbox 9 message data 0-7"/>
+    <symbol name="HCAN0_MB9_LAFM" address="0xFFFFD230" size="4" description="HCAN0 mailbox 9 LAFM / transmit trigger time"/>
+    <symbol name="HCAN0_MB10_CTRL" address="0xFFFFD240" size="6" description="HCAN0 mailbox 10 message control"/>
+    <symbol name="HCAN0_MB10_TS" address="0xFFFFD246" size="2" description="HCAN0 mailbox 10 timestamp"/>
+    <symbol name="HCAN0_MB10_DATA" address="0xFFFFD248" size="8" description="HCAN0 mailbox 10 message data 0-7"/>
+    <symbol name="HCAN0_MB10_LAFM" address="0xFFFFD250" size="4" description="HCAN0 mailbox 10 LAFM / transmit trigger time"/>
+    <symbol name="HCAN0_MB11_CTRL" address="0xFFFFD260" size="6" description="HCAN0 mailbox 11 message control"/>
+    <symbol name="HCAN0_MB11_TS" address="0xFFFFD266" size="2" description="HCAN0 mailbox 11 timestamp"/>
+    <symbol name="HCAN0_MB11_DATA" address="0xFFFFD268" size="8" description="HCAN0 mailbox 11 message data 0-7"/>
+    <symbol name="HCAN0_MB11_LAFM" address="0xFFFFD270" size="4" description="HCAN0 mailbox 11 LAFM / transmit trigger time"/>
+    <symbol name="HCAN0_MB12_CTRL" address="0xFFFFD280" size="6" description="HCAN0 mailbox 12 message control"/>
+    <symbol name="HCAN0_MB12_TS" address="0xFFFFD286" size="2" description="HCAN0 mailbox 12 timestamp"/>
+    <symbol name="HCAN0_MB12_DATA" address="0xFFFFD288" size="8" description="HCAN0 mailbox 12 message data 0-7"/>
+    <symbol name="HCAN0_MB12_LAFM" address="0xFFFFD290" size="4" description="HCAN0 mailbox 12 LAFM / transmit trigger time"/>
+    <symbol name="HCAN0_MB13_CTRL" address="0xFFFFD2A0" size="6" description="HCAN0 mailbox 13 message control"/>
+    <symbol name="HCAN0_MB13_TS" address="0xFFFFD2A6" size="2" description="HCAN0 mailbox 13 timestamp"/>
+    <symbol name="HCAN0_MB13_DATA" address="0xFFFFD2A8" size="8" description="HCAN0 mailbox 13 message data 0-7"/>
+    <symbol name="HCAN0_MB13_LAFM" address="0xFFFFD2B0" size="4" description="HCAN0 mailbox 13 LAFM / transmit trigger time"/>
+    <symbol name="HCAN0_MB14_CTRL" address="0xFFFFD2C0" size="6" description="HCAN0 mailbox 14 message control"/>
+    <symbol name="HCAN0_MB14_TS" address="0xFFFFD2C6" size="2" description="HCAN0 mailbox 14 timestamp"/>
+    <symbol name="HCAN0_MB14_DATA" address="0xFFFFD2C8" size="8" description="HCAN0 mailbox 14 message data 0-7"/>
+    <symbol name="HCAN0_MB14_LAFM" address="0xFFFFD2D0" size="4" description="HCAN0 mailbox 14 LAFM / transmit trigger time"/>
+    <symbol name="HCAN0_MB15_CTRL" address="0xFFFFD2E0" size="6" description="HCAN0 mailbox 15 message control"/>
+    <symbol name="HCAN0_MB15_TS" address="0xFFFFD2E6" size="2" description="HCAN0 mailbox 15 timestamp"/>
+    <symbol name="HCAN0_MB15_DATA" address="0xFFFFD2E8" size="8" description="HCAN0 mailbox 15 message data 0-7"/>
+    <symbol name="HCAN0_MB15_LAFM" address="0xFFFFD2F0" size="4" description="HCAN0 mailbox 15 LAFM / transmit trigger time"/>
+    <symbol name="HCAN0_MB16_CTRL" address="0xFFFFD300" size="6" description="HCAN0 mailbox 16 message control"/>
+    <symbol name="HCAN0_MB16_TS" address="0xFFFFD306" size="2" description="HCAN0 mailbox 16 timestamp"/>
+    <symbol name="HCAN0_MB16_DATA" address="0xFFFFD308" size="8" description="HCAN0 mailbox 16 message data 0-7"/>
+    <symbol name="HCAN0_MB16_LAFM" address="0xFFFFD310" size="4" description="HCAN0 mailbox 16 LAFM / transmit trigger time"/>
+    <symbol name="HCAN0_MB17_CTRL" address="0xFFFFD320" size="6" description="HCAN0 mailbox 17 message control"/>
+    <symbol name="HCAN0_MB17_TS" address="0xFFFFD326" size="2" description="HCAN0 mailbox 17 timestamp"/>
+    <symbol name="HCAN0_MB17_DATA" address="0xFFFFD328" size="8" description="HCAN0 mailbox 17 message data 0-7"/>
+    <symbol name="HCAN0_MB17_LAFM" address="0xFFFFD330" size="4" description="HCAN0 mailbox 17 LAFM / transmit trigger time"/>
+    <symbol name="HCAN0_MB18_CTRL" address="0xFFFFD340" size="6" description="HCAN0 mailbox 18 message control"/>
+    <symbol name="HCAN0_MB18_TS" address="0xFFFFD346" size="2" description="HCAN0 mailbox 18 timestamp"/>
+    <symbol name="HCAN0_MB18_DATA" address="0xFFFFD348" size="8" description="HCAN0 mailbox 18 message data 0-7"/>
+    <symbol name="HCAN0_MB18_LAFM" address="0xFFFFD350" size="4" description="HCAN0 mailbox 18 LAFM / transmit trigger time"/>
+    <symbol name="HCAN0_MB19_CTRL" address="0xFFFFD360" size="6" description="HCAN0 mailbox 19 message control"/>
+    <symbol name="HCAN0_MB19_TS" address="0xFFFFD366" size="2" description="HCAN0 mailbox 19 timestamp"/>
+    <symbol name="HCAN0_MB19_DATA" address="0xFFFFD368" size="8" description="HCAN0 mailbox 19 message data 0-7"/>
+    <symbol name="HCAN0_MB19_LAFM" address="0xFFFFD370" size="4" description="HCAN0 mailbox 19 LAFM / transmit trigger time"/>
+    <symbol name="HCAN0_MB20_CTRL" address="0xFFFFD380" size="6" description="HCAN0 mailbox 20 message control"/>
+    <symbol name="HCAN0_MB20_TS" address="0xFFFFD386" size="2" description="HCAN0 mailbox 20 timestamp"/>
+    <symbol name="HCAN0_MB20_DATA" address="0xFFFFD388" size="8" description="HCAN0 mailbox 20 message data 0-7"/>
+    <symbol name="HCAN0_MB20_LAFM" address="0xFFFFD390" size="4" description="HCAN0 mailbox 20 LAFM / transmit trigger time"/>
+    <symbol name="HCAN0_MB21_CTRL" address="0xFFFFD3A0" size="6" description="HCAN0 mailbox 21 message control"/>
+    <symbol name="HCAN0_MB21_TS" address="0xFFFFD3A6" size="2" description="HCAN0 mailbox 21 timestamp"/>
+    <symbol name="HCAN0_MB21_DATA" address="0xFFFFD3A8" size="8" description="HCAN0 mailbox 21 message data 0-7"/>
+    <symbol name="HCAN0_MB21_LAFM" address="0xFFFFD3B0" size="4" description="HCAN0 mailbox 21 LAFM / transmit trigger time"/>
+    <symbol name="HCAN0_MB22_CTRL" address="0xFFFFD3C0" size="6" description="HCAN0 mailbox 22 message control"/>
+    <symbol name="HCAN0_MB22_TS" address="0xFFFFD3C6" size="2" description="HCAN0 mailbox 22 timestamp"/>
+    <symbol name="HCAN0_MB22_DATA" address="0xFFFFD3C8" size="8" description="HCAN0 mailbox 22 message data 0-7"/>
+    <symbol name="HCAN0_MB22_LAFM" address="0xFFFFD3D0" size="4" description="HCAN0 mailbox 22 LAFM / transmit trigger time"/>
+    <symbol name="HCAN0_MB23_CTRL" address="0xFFFFD3E0" size="6" description="HCAN0 mailbox 23 message control"/>
+    <symbol name="HCAN0_MB23_TS" address="0xFFFFD3E6" size="2" description="HCAN0 mailbox 23 timestamp"/>
+    <symbol name="HCAN0_MB23_DATA" address="0xFFFFD3E8" size="8" description="HCAN0 mailbox 23 message data 0-7"/>
+    <symbol name="HCAN0_MB23_LAFM" address="0xFFFFD3F0" size="4" description="HCAN0 mailbox 23 LAFM / transmit trigger time"/>
+    <symbol name="HCAN0_MB24_CTRL" address="0xFFFFD400" size="6" description="HCAN0 mailbox 24 message control"/>
+    <symbol name="HCAN0_MB24_TS" address="0xFFFFD406" size="2" description="HCAN0 mailbox 24 timestamp"/>
+    <symbol name="HCAN0_MB24_DATA" address="0xFFFFD408" size="8" description="HCAN0 mailbox 24 message data 0-7"/>
+    <symbol name="HCAN0_MB24_LAFM" address="0xFFFFD410" size="4" description="HCAN0 mailbox 24 LAFM / transmit trigger time"/>
+    <symbol name="HCAN0_MB25_CTRL" address="0xFFFFD420" size="6" description="HCAN0 mailbox 25 message control"/>
+    <symbol name="HCAN0_MB25_TS" address="0xFFFFD426" size="2" description="HCAN0 mailbox 25 timestamp"/>
+    <symbol name="HCAN0_MB25_DATA" address="0xFFFFD428" size="8" description="HCAN0 mailbox 25 message data 0-7"/>
+    <symbol name="HCAN0_MB25_LAFM" address="0xFFFFD430" size="4" description="HCAN0 mailbox 25 LAFM / transmit trigger time"/>
+    <symbol name="HCAN0_MB26_CTRL" address="0xFFFFD440" size="6" description="HCAN0 mailbox 26 message control"/>
+    <symbol name="HCAN0_MB26_TS" address="0xFFFFD446" size="2" description="HCAN0 mailbox 26 timestamp"/>
+    <symbol name="HCAN0_MB26_DATA" address="0xFFFFD448" size="8" description="HCAN0 mailbox 26 message data 0-7"/>
+    <symbol name="HCAN0_MB26_LAFM" address="0xFFFFD450" size="4" description="HCAN0 mailbox 26 LAFM / transmit trigger time"/>
+    <symbol name="HCAN0_MB27_CTRL" address="0xFFFFD460" size="6" description="HCAN0 mailbox 27 message control"/>
+    <symbol name="HCAN0_MB27_TS" address="0xFFFFD466" size="2" description="HCAN0 mailbox 27 timestamp"/>
+    <symbol name="HCAN0_MB27_DATA" address="0xFFFFD468" size="8" description="HCAN0 mailbox 27 message data 0-7"/>
+    <symbol name="HCAN0_MB27_LAFM" address="0xFFFFD470" size="4" description="HCAN0 mailbox 27 LAFM / transmit trigger time"/>
+    <symbol name="HCAN0_MB28_CTRL" address="0xFFFFD480" size="6" description="HCAN0 mailbox 28 message control"/>
+    <symbol name="HCAN0_MB28_TS" address="0xFFFFD486" size="2" description="HCAN0 mailbox 28 timestamp"/>
+    <symbol name="HCAN0_MB28_DATA" address="0xFFFFD488" size="8" description="HCAN0 mailbox 28 message data 0-7"/>
+    <symbol name="HCAN0_MB28_LAFM" address="0xFFFFD490" size="4" description="HCAN0 mailbox 28 LAFM / transmit trigger time"/>
+    <symbol name="HCAN0_MB29_CTRL" address="0xFFFFD4A0" size="6" description="HCAN0 mailbox 29 message control"/>
+    <symbol name="HCAN0_MB29_TS" address="0xFFFFD4A6" size="2" description="HCAN0 mailbox 29 timestamp"/>
+    <symbol name="HCAN0_MB29_DATA" address="0xFFFFD4A8" size="8" description="HCAN0 mailbox 29 message data 0-7"/>
+    <symbol name="HCAN0_MB29_LAFM" address="0xFFFFD4B0" size="4" description="HCAN0 mailbox 29 LAFM / transmit trigger time"/>
+    <symbol name="HCAN0_MB30_CTRL" address="0xFFFFD4C0" size="6" description="HCAN0 mailbox 30 message control"/>
+    <symbol name="HCAN0_MB30_TS" address="0xFFFFD4C6" size="2" description="HCAN0 mailbox 30 timestamp"/>
+    <symbol name="HCAN0_MB30_DATA" address="0xFFFFD4C8" size="8" description="HCAN0 mailbox 30 message data 0-7"/>
+    <symbol name="HCAN0_MB30_LAFM" address="0xFFFFD4D0" size="4" description="HCAN0 mailbox 30 LAFM / transmit trigger time"/>
+    <symbol name="HCAN0_MB31_CTRL" address="0xFFFFD4E0" size="6" description="HCAN0 mailbox 31 message control"/>
+    <symbol name="HCAN0_MB31_TS" address="0xFFFFD4E6" size="2" description="HCAN0 mailbox 31 timestamp"/>
+    <symbol name="HCAN0_MB31_DATA" address="0xFFFFD4E8" size="8" description="HCAN0 mailbox 31 message data 0-7"/>
+    <symbol name="HCAN0_MB31_LAFM" address="0xFFFFD4F0" size="4" description="HCAN0 mailbox 31 LAFM / transmit trigger time"/>
+    <!-- HCAN1 -->
+    <symbol name="MCR_1" address="0xFFFFD800" size="2" description="HCAN1 MCR (channel 1 control register)"/>
+    <symbol name="GSR_1" address="0xFFFFD802" size="2" description="HCAN1 GSR (channel 1 control register)"/>
+    <symbol name="BCR1_1" address="0xFFFFD804" size="2" description="HCAN1 BCR1 (channel 1 control register)"/>
+    <symbol name="BCR0_1" address="0xFFFFD806" size="2" description="HCAN1 BCR0 (channel 1 control register)"/>
+    <symbol name="IRR_1" address="0xFFFFD808" size="2" description="HCAN1 IRR (channel 1 control register)"/>
+    <symbol name="IMR_1" address="0xFFFFD80A" size="2" description="HCAN1 IMR (channel 1 control register)"/>
+    <symbol name="TEC_REC_1" address="0xFFFFD80C" size="2" description="HCAN1 TEC/REC (channel 1 control register)"/>
+    <symbol name="TXPR1_1" address="0xFFFFD820" size="2" description="HCAN1 TXPR1 (channel 1 control register)"/>
+    <symbol name="TXPR0_1" address="0xFFFFD822" size="2" description="HCAN1 TXPR0 (channel 1 control register)"/>
+    <symbol name="TXCR1_1" address="0xFFFFD828" size="2" description="HCAN1 TXCR1 (channel 1 control register)"/>
+    <symbol name="TXCR0_1" address="0xFFFFD82A" size="2" description="HCAN1 TXCR0 (channel 1 control register)"/>
+    <symbol name="TXACK1_1" address="0xFFFFD830" size="2" description="HCAN1 TXACK1 (channel 1 control register)"/>
+    <symbol name="TXACK0_1" address="0xFFFFD832" size="2" description="HCAN1 TXACK0 (channel 1 control register)"/>
+    <symbol name="ABACK1_1" address="0xFFFFD838" size="2" description="HCAN1 ABACK1 (channel 1 control register)"/>
+    <symbol name="ABACK0_1" address="0xFFFFD83A" size="2" description="HCAN1 ABACK0 (channel 1 control register)"/>
+    <symbol name="RXPR1_1" address="0xFFFFD840" size="2" description="HCAN1 RXPR1 (channel 1 control register)"/>
+    <symbol name="RXPR0_1" address="0xFFFFD842" size="2" description="HCAN1 RXPR0 (channel 1 control register)"/>
+    <symbol name="RFPR1_1" address="0xFFFFD848" size="2" description="HCAN1 RFPR1 (channel 1 control register)"/>
+    <symbol name="RFPR0_1" address="0xFFFFD84A" size="2" description="HCAN1 RFPR0 (channel 1 control register)"/>
+    <symbol name="MBIMR1_1" address="0xFFFFD850" size="2" description="HCAN1 MBIMR1 (channel 1 control register)"/>
+    <symbol name="MBIMR0_1" address="0xFFFFD852" size="2" description="HCAN1 MBIMR0 (channel 1 control register)"/>
+    <symbol name="UMSR1_1" address="0xFFFFD858" size="2" description="HCAN1 UMSR1 (channel 1 control register)"/>
+    <symbol name="UMSR0_1" address="0xFFFFD85A" size="2" description="HCAN1 UMSR0 (channel 1 control register)"/>
+    <symbol name="TCNTR_1" address="0xFFFFD880" size="2" description="HCAN1 TCNTR (channel 1 control register)"/>
+    <symbol name="TCR_1" address="0xFFFFD882" size="2" description="HCAN1 TCR (channel 1 control register)"/>
+    <symbol name="TSR_1" address="0xFFFFD884" size="2" description="HCAN1 TSR (channel 1 control register)"/>
+    <symbol name="TDCR_1" address="0xFFFFD886" size="2" description="HCAN1 TDCR (channel 1 control register)"/>
+    <symbol name="LOSR_1" address="0xFFFFD888" size="2" description="HCAN1 LOSR (channel 1 control register)"/>
+    <symbol name="ICR0_cc_1" address="0xFFFFD88A" size="2" description="HCAN1 input capture register for cycle counter (ICR0_cc1)"/>
+    <symbol name="ICR0_tm_1" address="0xFFFFD88C" size="2" description="HCAN1 input capture register for timer counter (ICR0_tm1)"/>
+    <symbol name="ICR1_1" address="0xFFFFD88E" size="2" description="HCAN1 ICR1 (channel 1 control register)"/>
+    <symbol name="TCMR0_1" address="0xFFFFD890" size="2" description="HCAN1 TCMR0 (channel 1 control register)"/>
+    <symbol name="TCMR1_1" address="0xFFFFD892" size="2" description="HCAN1 TCMR1 (channel 1 control register)"/>
+    <symbol name="TCMR2_1" address="0xFFFFD894" size="2" description="HCAN1 TCMR2 (channel 1 control register)"/>
+    <symbol name="CCR_1" address="0xFFFFD896" size="2" description="HCAN1 CCR (channel 1 control register)"/>
+    <symbol name="CMAX_1" address="0xFFFFD898" size="2" description="HCAN1 CMAX (channel 1 control register)"/>
+    <symbol name="TMR_1" address="0xFFFFD89A" size="2" description="HCAN1 TMR (channel 1 control register)"/>
+    <symbol name="CCR_buf_1" address="0xFFFFD89C" size="2" description="HCAN1 cycle counter double buffer (CCR_buf1)"/>
+    <symbol name="ICR0_buf_1" address="0xFFFFD89E" size="2" description="HCAN1 input capture double buffer (ICR0_buf1)"/>
+    <symbol name="HCAN1_MB0_CTRL" address="0xFFFFD900" size="6" description="HCAN1 mailbox 0 message control"/>
+    <symbol name="HCAN1_MB0_TS" address="0xFFFFD906" size="2" description="HCAN1 mailbox 0 timestamp"/>
+    <symbol name="HCAN1_MB0_DATA" address="0xFFFFD908" size="8" description="HCAN1 mailbox 0 message data 0-7"/>
+    <symbol name="HCAN1_MB0_LAFM" address="0xFFFFD910" size="4" description="HCAN1 mailbox 0 LAFM / transmit trigger time"/>
+    <symbol name="HCAN1_MB1_CTRL" address="0xFFFFD920" size="6" description="HCAN1 mailbox 1 message control"/>
+    <symbol name="HCAN1_MB1_TS" address="0xFFFFD926" size="2" description="HCAN1 mailbox 1 timestamp"/>
+    <symbol name="HCAN1_MB1_DATA" address="0xFFFFD928" size="8" description="HCAN1 mailbox 1 message data 0-7"/>
+    <symbol name="HCAN1_MB1_LAFM" address="0xFFFFD930" size="4" description="HCAN1 mailbox 1 LAFM / transmit trigger time"/>
+    <symbol name="HCAN1_MB2_CTRL" address="0xFFFFD940" size="6" description="HCAN1 mailbox 2 message control"/>
+    <symbol name="HCAN1_MB2_TS" address="0xFFFFD946" size="2" description="HCAN1 mailbox 2 timestamp"/>
+    <symbol name="HCAN1_MB2_DATA" address="0xFFFFD948" size="8" description="HCAN1 mailbox 2 message data 0-7"/>
+    <symbol name="HCAN1_MB2_LAFM" address="0xFFFFD950" size="4" description="HCAN1 mailbox 2 LAFM / transmit trigger time"/>
+    <symbol name="HCAN1_MB3_CTRL" address="0xFFFFD960" size="6" description="HCAN1 mailbox 3 message control"/>
+    <symbol name="HCAN1_MB3_TS" address="0xFFFFD966" size="2" description="HCAN1 mailbox 3 timestamp"/>
+    <symbol name="HCAN1_MB3_DATA" address="0xFFFFD968" size="8" description="HCAN1 mailbox 3 message data 0-7"/>
+    <symbol name="HCAN1_MB3_LAFM" address="0xFFFFD970" size="4" description="HCAN1 mailbox 3 LAFM / transmit trigger time"/>
+    <symbol name="HCAN1_MB4_CTRL" address="0xFFFFD980" size="6" description="HCAN1 mailbox 4 message control"/>
+    <symbol name="HCAN1_MB4_TS" address="0xFFFFD986" size="2" description="HCAN1 mailbox 4 timestamp"/>
+    <symbol name="HCAN1_MB4_DATA" address="0xFFFFD988" size="8" description="HCAN1 mailbox 4 message data 0-7"/>
+    <symbol name="HCAN1_MB4_LAFM" address="0xFFFFD990" size="4" description="HCAN1 mailbox 4 LAFM / transmit trigger time"/>
+    <symbol name="HCAN1_MB5_CTRL" address="0xFFFFD9A0" size="6" description="HCAN1 mailbox 5 message control"/>
+    <symbol name="HCAN1_MB5_TS" address="0xFFFFD9A6" size="2" description="HCAN1 mailbox 5 timestamp"/>
+    <symbol name="HCAN1_MB5_DATA" address="0xFFFFD9A8" size="8" description="HCAN1 mailbox 5 message data 0-7"/>
+    <symbol name="HCAN1_MB5_LAFM" address="0xFFFFD9B0" size="4" description="HCAN1 mailbox 5 LAFM / transmit trigger time"/>
+    <symbol name="HCAN1_MB6_CTRL" address="0xFFFFD9C0" size="6" description="HCAN1 mailbox 6 message control"/>
+    <symbol name="HCAN1_MB6_TS" address="0xFFFFD9C6" size="2" description="HCAN1 mailbox 6 timestamp"/>
+    <symbol name="HCAN1_MB6_DATA" address="0xFFFFD9C8" size="8" description="HCAN1 mailbox 6 message data 0-7"/>
+    <symbol name="HCAN1_MB6_LAFM" address="0xFFFFD9D0" size="4" description="HCAN1 mailbox 6 LAFM / transmit trigger time"/>
+    <symbol name="HCAN1_MB7_CTRL" address="0xFFFFD9E0" size="6" description="HCAN1 mailbox 7 message control"/>
+    <symbol name="HCAN1_MB7_TS" address="0xFFFFD9E6" size="2" description="HCAN1 mailbox 7 timestamp"/>
+    <symbol name="HCAN1_MB7_DATA" address="0xFFFFD9E8" size="8" description="HCAN1 mailbox 7 message data 0-7"/>
+    <symbol name="HCAN1_MB7_LAFM" address="0xFFFFD9F0" size="4" description="HCAN1 mailbox 7 LAFM / transmit trigger time"/>
+    <symbol name="HCAN1_MB8_CTRL" address="0xFFFFDA00" size="6" description="HCAN1 mailbox 8 message control"/>
+    <symbol name="HCAN1_MB8_TS" address="0xFFFFDA06" size="2" description="HCAN1 mailbox 8 timestamp"/>
+    <symbol name="HCAN1_MB8_DATA" address="0xFFFFDA08" size="8" description="HCAN1 mailbox 8 message data 0-7"/>
+    <symbol name="HCAN1_MB8_LAFM" address="0xFFFFDA10" size="4" description="HCAN1 mailbox 8 LAFM / transmit trigger time"/>
+    <symbol name="HCAN1_MB9_CTRL" address="0xFFFFDA20" size="6" description="HCAN1 mailbox 9 message control"/>
+    <symbol name="HCAN1_MB9_TS" address="0xFFFFDA26" size="2" description="HCAN1 mailbox 9 timestamp"/>
+    <symbol name="HCAN1_MB9_DATA" address="0xFFFFDA28" size="8" description="HCAN1 mailbox 9 message data 0-7"/>
+    <symbol name="HCAN1_MB9_LAFM" address="0xFFFFDA30" size="4" description="HCAN1 mailbox 9 LAFM / transmit trigger time"/>
+    <symbol name="HCAN1_MB10_CTRL" address="0xFFFFDA40" size="6" description="HCAN1 mailbox 10 message control"/>
+    <symbol name="HCAN1_MB10_TS" address="0xFFFFDA46" size="2" description="HCAN1 mailbox 10 timestamp"/>
+    <symbol name="HCAN1_MB10_DATA" address="0xFFFFDA48" size="8" description="HCAN1 mailbox 10 message data 0-7"/>
+    <symbol name="HCAN1_MB10_LAFM" address="0xFFFFDA50" size="4" description="HCAN1 mailbox 10 LAFM / transmit trigger time"/>
+    <symbol name="HCAN1_MB11_CTRL" address="0xFFFFDA60" size="6" description="HCAN1 mailbox 11 message control"/>
+    <symbol name="HCAN1_MB11_TS" address="0xFFFFDA66" size="2" description="HCAN1 mailbox 11 timestamp"/>
+    <symbol name="HCAN1_MB11_DATA" address="0xFFFFDA68" size="8" description="HCAN1 mailbox 11 message data 0-7"/>
+    <symbol name="HCAN1_MB11_LAFM" address="0xFFFFDA70" size="4" description="HCAN1 mailbox 11 LAFM / transmit trigger time"/>
+    <symbol name="HCAN1_MB12_CTRL" address="0xFFFFDA80" size="6" description="HCAN1 mailbox 12 message control"/>
+    <symbol name="HCAN1_MB12_TS" address="0xFFFFDA86" size="2" description="HCAN1 mailbox 12 timestamp"/>
+    <symbol name="HCAN1_MB12_DATA" address="0xFFFFDA88" size="8" description="HCAN1 mailbox 12 message data 0-7"/>
+    <symbol name="HCAN1_MB12_LAFM" address="0xFFFFDA90" size="4" description="HCAN1 mailbox 12 LAFM / transmit trigger time"/>
+    <symbol name="HCAN1_MB13_CTRL" address="0xFFFFDAA0" size="6" description="HCAN1 mailbox 13 message control"/>
+    <symbol name="HCAN1_MB13_TS" address="0xFFFFDAA6" size="2" description="HCAN1 mailbox 13 timestamp"/>
+    <symbol name="HCAN1_MB13_DATA" address="0xFFFFDAA8" size="8" description="HCAN1 mailbox 13 message data 0-7"/>
+    <symbol name="HCAN1_MB13_LAFM" address="0xFFFFDAB0" size="4" description="HCAN1 mailbox 13 LAFM / transmit trigger time"/>
+    <symbol name="HCAN1_MB14_CTRL" address="0xFFFFDAC0" size="6" description="HCAN1 mailbox 14 message control"/>
+    <symbol name="HCAN1_MB14_TS" address="0xFFFFDAC6" size="2" description="HCAN1 mailbox 14 timestamp"/>
+    <symbol name="HCAN1_MB14_DATA" address="0xFFFFDAC8" size="8" description="HCAN1 mailbox 14 message data 0-7"/>
+    <symbol name="HCAN1_MB14_LAFM" address="0xFFFFDAD0" size="4" description="HCAN1 mailbox 14 LAFM / transmit trigger time"/>
+    <symbol name="HCAN1_MB15_CTRL" address="0xFFFFDAE0" size="6" description="HCAN1 mailbox 15 message control"/>
+    <symbol name="HCAN1_MB15_TS" address="0xFFFFDAE6" size="2" description="HCAN1 mailbox 15 timestamp"/>
+    <symbol name="HCAN1_MB15_DATA" address="0xFFFFDAE8" size="8" description="HCAN1 mailbox 15 message data 0-7"/>
+    <symbol name="HCAN1_MB15_LAFM" address="0xFFFFDAF0" size="4" description="HCAN1 mailbox 15 LAFM / transmit trigger time"/>
+    <symbol name="HCAN1_MB16_CTRL" address="0xFFFFDB00" size="6" description="HCAN1 mailbox 16 message control"/>
+    <symbol name="HCAN1_MB16_TS" address="0xFFFFDB06" size="2" description="HCAN1 mailbox 16 timestamp"/>
+    <symbol name="HCAN1_MB16_DATA" address="0xFFFFDB08" size="8" description="HCAN1 mailbox 16 message data 0-7"/>
+    <symbol name="HCAN1_MB16_LAFM" address="0xFFFFDB10" size="4" description="HCAN1 mailbox 16 LAFM / transmit trigger time"/>
+    <symbol name="HCAN1_MB17_CTRL" address="0xFFFFDB20" size="6" description="HCAN1 mailbox 17 message control"/>
+    <symbol name="HCAN1_MB17_TS" address="0xFFFFDB26" size="2" description="HCAN1 mailbox 17 timestamp"/>
+    <symbol name="HCAN1_MB17_DATA" address="0xFFFFDB28" size="8" description="HCAN1 mailbox 17 message data 0-7"/>
+    <symbol name="HCAN1_MB17_LAFM" address="0xFFFFDB30" size="4" description="HCAN1 mailbox 17 LAFM / transmit trigger time"/>
+    <symbol name="HCAN1_MB18_CTRL" address="0xFFFFDB40" size="6" description="HCAN1 mailbox 18 message control"/>
+    <symbol name="HCAN1_MB18_TS" address="0xFFFFDB46" size="2" description="HCAN1 mailbox 18 timestamp"/>
+    <symbol name="HCAN1_MB18_DATA" address="0xFFFFDB48" size="8" description="HCAN1 mailbox 18 message data 0-7"/>
+    <symbol name="HCAN1_MB18_LAFM" address="0xFFFFDB50" size="4" description="HCAN1 mailbox 18 LAFM / transmit trigger time"/>
+    <symbol name="HCAN1_MB19_CTRL" address="0xFFFFDB60" size="6" description="HCAN1 mailbox 19 message control"/>
+    <symbol name="HCAN1_MB19_TS" address="0xFFFFDB66" size="2" description="HCAN1 mailbox 19 timestamp"/>
+    <symbol name="HCAN1_MB19_DATA" address="0xFFFFDB68" size="8" description="HCAN1 mailbox 19 message data 0-7"/>
+    <symbol name="HCAN1_MB19_LAFM" address="0xFFFFDB70" size="4" description="HCAN1 mailbox 19 LAFM / transmit trigger time"/>
+    <symbol name="HCAN1_MB20_CTRL" address="0xFFFFDB80" size="6" description="HCAN1 mailbox 20 message control"/>
+    <symbol name="HCAN1_MB20_TS" address="0xFFFFDB86" size="2" description="HCAN1 mailbox 20 timestamp"/>
+    <symbol name="HCAN1_MB20_DATA" address="0xFFFFDB88" size="8" description="HCAN1 mailbox 20 message data 0-7"/>
+    <symbol name="HCAN1_MB20_LAFM" address="0xFFFFDB90" size="4" description="HCAN1 mailbox 20 LAFM / transmit trigger time"/>
+    <symbol name="HCAN1_MB21_CTRL" address="0xFFFFDBA0" size="6" description="HCAN1 mailbox 21 message control"/>
+    <symbol name="HCAN1_MB21_TS" address="0xFFFFDBA6" size="2" description="HCAN1 mailbox 21 timestamp"/>
+    <symbol name="HCAN1_MB21_DATA" address="0xFFFFDBA8" size="8" description="HCAN1 mailbox 21 message data 0-7"/>
+    <symbol name="HCAN1_MB21_LAFM" address="0xFFFFDBB0" size="4" description="HCAN1 mailbox 21 LAFM / transmit trigger time"/>
+    <symbol name="HCAN1_MB22_CTRL" address="0xFFFFDBC0" size="6" description="HCAN1 mailbox 22 message control"/>
+    <symbol name="HCAN1_MB22_TS" address="0xFFFFDBC6" size="2" description="HCAN1 mailbox 22 timestamp"/>
+    <symbol name="HCAN1_MB22_DATA" address="0xFFFFDBC8" size="8" description="HCAN1 mailbox 22 message data 0-7"/>
+    <symbol name="HCAN1_MB22_LAFM" address="0xFFFFDBD0" size="4" description="HCAN1 mailbox 22 LAFM / transmit trigger time"/>
+    <symbol name="HCAN1_MB23_CTRL" address="0xFFFFDBE0" size="6" description="HCAN1 mailbox 23 message control"/>
+    <symbol name="HCAN1_MB23_TS" address="0xFFFFDBE6" size="2" description="HCAN1 mailbox 23 timestamp"/>
+    <symbol name="HCAN1_MB23_DATA" address="0xFFFFDBE8" size="8" description="HCAN1 mailbox 23 message data 0-7"/>
+    <symbol name="HCAN1_MB23_LAFM" address="0xFFFFDBF0" size="4" description="HCAN1 mailbox 23 LAFM / transmit trigger time"/>
+    <symbol name="HCAN1_MB24_CTRL" address="0xFFFFDC00" size="6" description="HCAN1 mailbox 24 message control"/>
+    <symbol name="HCAN1_MB24_TS" address="0xFFFFDC06" size="2" description="HCAN1 mailbox 24 timestamp"/>
+    <symbol name="HCAN1_MB24_DATA" address="0xFFFFDC08" size="8" description="HCAN1 mailbox 24 message data 0-7"/>
+    <symbol name="HCAN1_MB24_LAFM" address="0xFFFFDC10" size="4" description="HCAN1 mailbox 24 LAFM / transmit trigger time"/>
+    <symbol name="HCAN1_MB25_CTRL" address="0xFFFFDC20" size="6" description="HCAN1 mailbox 25 message control"/>
+    <symbol name="HCAN1_MB25_TS" address="0xFFFFDC26" size="2" description="HCAN1 mailbox 25 timestamp"/>
+    <symbol name="HCAN1_MB25_DATA" address="0xFFFFDC28" size="8" description="HCAN1 mailbox 25 message data 0-7"/>
+    <symbol name="HCAN1_MB25_LAFM" address="0xFFFFDC30" size="4" description="HCAN1 mailbox 25 LAFM / transmit trigger time"/>
+    <symbol name="HCAN1_MB26_CTRL" address="0xFFFFDC40" size="6" description="HCAN1 mailbox 26 message control"/>
+    <symbol name="HCAN1_MB26_TS" address="0xFFFFDC46" size="2" description="HCAN1 mailbox 26 timestamp"/>
+    <symbol name="HCAN1_MB26_DATA" address="0xFFFFDC48" size="8" description="HCAN1 mailbox 26 message data 0-7"/>
+    <symbol name="HCAN1_MB26_LAFM" address="0xFFFFDC50" size="4" description="HCAN1 mailbox 26 LAFM / transmit trigger time"/>
+    <symbol name="HCAN1_MB27_CTRL" address="0xFFFFDC60" size="6" description="HCAN1 mailbox 27 message control"/>
+    <symbol name="HCAN1_MB27_TS" address="0xFFFFDC66" size="2" description="HCAN1 mailbox 27 timestamp"/>
+    <symbol name="HCAN1_MB27_DATA" address="0xFFFFDC68" size="8" description="HCAN1 mailbox 27 message data 0-7"/>
+    <symbol name="HCAN1_MB27_LAFM" address="0xFFFFDC70" size="4" description="HCAN1 mailbox 27 LAFM / transmit trigger time"/>
+    <symbol name="HCAN1_MB28_CTRL" address="0xFFFFDC80" size="6" description="HCAN1 mailbox 28 message control"/>
+    <symbol name="HCAN1_MB28_TS" address="0xFFFFDC86" size="2" description="HCAN1 mailbox 28 timestamp"/>
+    <symbol name="HCAN1_MB28_DATA" address="0xFFFFDC88" size="8" description="HCAN1 mailbox 28 message data 0-7"/>
+    <symbol name="HCAN1_MB28_LAFM" address="0xFFFFDC90" size="4" description="HCAN1 mailbox 28 LAFM / transmit trigger time"/>
+    <symbol name="HCAN1_MB29_CTRL" address="0xFFFFDCA0" size="6" description="HCAN1 mailbox 29 message control"/>
+    <symbol name="HCAN1_MB29_TS" address="0xFFFFDCA6" size="2" description="HCAN1 mailbox 29 timestamp"/>
+    <symbol name="HCAN1_MB29_DATA" address="0xFFFFDCA8" size="8" description="HCAN1 mailbox 29 message data 0-7"/>
+    <symbol name="HCAN1_MB29_LAFM" address="0xFFFFDCB0" size="4" description="HCAN1 mailbox 29 LAFM / transmit trigger time"/>
+    <symbol name="HCAN1_MB30_CTRL" address="0xFFFFDCC0" size="6" description="HCAN1 mailbox 30 message control"/>
+    <symbol name="HCAN1_MB30_TS" address="0xFFFFDCC6" size="2" description="HCAN1 mailbox 30 timestamp"/>
+    <symbol name="HCAN1_MB30_DATA" address="0xFFFFDCC8" size="8" description="HCAN1 mailbox 30 message data 0-7"/>
+    <symbol name="HCAN1_MB30_LAFM" address="0xFFFFDCD0" size="4" description="HCAN1 mailbox 30 LAFM / transmit trigger time"/>
+    <symbol name="HCAN1_MB31_CTRL" address="0xFFFFDCE0" size="6" description="HCAN1 mailbox 31 message control"/>
+    <symbol name="HCAN1_MB31_TS" address="0xFFFFDCE6" size="2" description="HCAN1 mailbox 31 timestamp"/>
+    <symbol name="HCAN1_MB31_DATA" address="0xFFFFDCE8" size="8" description="HCAN1 mailbox 31 message data 0-7"/>
+    <symbol name="HCAN1_MB31_LAFM" address="0xFFFFDCF0" size="4" description="HCAN1 mailbox 31 LAFM / transmit trigger time"/>
+    <!-- FLASH -->
+    <symbol name="FCCS" address="0xFFFFE800" size="1" description="Flash code control and status register"/>
+    <symbol name="FPCS" address="0xFFFFE801" size="1" description="FLASH FPCS"/>
+    <symbol name="FECS" address="0xFFFFE802" size="1" description="FLASH FECS"/>
+    <symbol name="FKEY" address="0xFFFFE804" size="1" description="Flash key code register FKEY"/>
+    <symbol name="FMATS" address="0xFFFFE805" size="1" description="Flash MAT select register"/>
+    <symbol name="FTDAR" address="0xFFFFE806" size="1" description="FLASH FTDAR"/>
+    <!-- UBC -->
+    <symbol name="UBARH" address="0xFFFFEC00" size="2" description="User break address register H UBARH"/>
+    <symbol name="UBARL" address="0xFFFFEC02" size="2" description="User break address register L UBARL"/>
+    <symbol name="UBAMRH" address="0xFFFFEC04" size="2" description="User break address mask register H UBAMRH"/>
+    <symbol name="UBAMRL" address="0xFFFFEC06" size="2" description="User break address mask register L UBAMRL"/>
+    <symbol name="UBBR" address="0xFFFFEC08" size="2" description="User break bus cycle register UBBR"/>
+    <symbol name="UBCR" address="0xFFFFEC0A" size="2" description="User break control register UBCR"/>
+    <!-- WDT -->
+    <symbol name="TCSR" address="0xFFFFEC10" size="1" description="WDT timer control/status register (read address EC10)"/>
+    <symbol name="TCNT" address="0xFFFFEC11" size="1" description="WDT timer counter (read address EC11)"/>
+    <symbol name="RSTCSR_W" address="0xFFFFEC12" size="2" description="WDT reset control/status register, write address (word write with key)"/>
+    <symbol name="RSTCSR" address="0xFFFFEC13" size="1" description="WDT reset control/status register (read address EC13)"/>
+    <!-- POWER-DOWN -->
+    <symbol name="SBYCR" address="0xFFFFEC14" size="1" description="Standby control register SBYCR"/>
+    <!-- BSC -->
+    <symbol name="BCR1" address="0xFFFFEC20" size="2" description="Bus control register 1 BCR1"/>
+    <symbol name="BCR2" address="0xFFFFEC22" size="2" description="Bus control register 2 BCR2"/>
+    <symbol name="WCR" address="0xFFFFEC24" size="2" description="Wait state control register WCR"/>
+    <symbol name="RAMER" address="0xFFFFEC26" size="2" description="RAM emulation register RAMER"/>
+    <!-- DMAC -->
+    <symbol name="DMAOR" address="0xFFFFECB0" size="2" description="DMAC operation register"/>
+    <symbol name="SAR0" address="0xFFFFECC0" size="4" description="DMAC SAR0"/>
+    <symbol name="DAR0" address="0xFFFFECC4" size="4" description="DMAC DAR0"/>
+    <symbol name="DMATCR0" address="0xFFFFECC8" size="4" description="DMAC DMATCR0"/>
+    <symbol name="CHCR0" address="0xFFFFECCC" size="4" description="DMA channel control register 0"/>
+    <symbol name="SAR1" address="0xFFFFECD0" size="4" description="DMAC SAR1"/>
+    <symbol name="DAR1" address="0xFFFFECD4" size="4" description="DMAC DAR1"/>
+    <symbol name="DMATCR1" address="0xFFFFECD8" size="4" description="DMAC DMATCR1"/>
+    <symbol name="CHCR1" address="0xFFFFECDC" size="4" description="DMA channel control register 1"/>
+    <symbol name="SAR2" address="0xFFFFECE0" size="4" description="DMAC SAR2"/>
+    <symbol name="DAR2" address="0xFFFFECE4" size="4" description="DMAC DAR2"/>
+    <symbol name="DMATCR2" address="0xFFFFECE8" size="4" description="DMAC DMATCR2"/>
+    <symbol name="CHCR2" address="0xFFFFECEC" size="4" description="DMA channel control register 2"/>
+    <symbol name="SAR3" address="0xFFFFECF0" size="4" description="DMAC SAR3"/>
+    <symbol name="DAR3" address="0xFFFFECF4" size="4" description="DMAC DAR3"/>
+    <symbol name="DMATCR3" address="0xFFFFECF8" size="4" description="DMAC DMATCR3"/>
+    <symbol name="CHCR3" address="0xFFFFECFC" size="4" description="DMA channel control register 3"/>
+    <!-- INTC -->
+    <symbol name="IPRA" address="0xFFFFED00" size="2" description="Interrupt priority register A IPRA"/>
+    <symbol name="IPRB" address="0xFFFFED02" size="2" description="Interrupt priority register B IPRB"/>
+    <symbol name="IPRC" address="0xFFFFED04" size="2" description="Interrupt priority register C IPRC"/>
+    <symbol name="IPRD" address="0xFFFFED06" size="2" description="Interrupt priority register D IPRD"/>
+    <symbol name="IPRE" address="0xFFFFED08" size="2" description="Interrupt priority register E IPRE"/>
+    <symbol name="IPRF" address="0xFFFFED0A" size="2" description="Interrupt priority register F IPRF"/>
+    <symbol name="IPRG" address="0xFFFFED0C" size="2" description="Interrupt priority register G IPRG"/>
+    <symbol name="IPRH" address="0xFFFFED0E" size="2" description="Interrupt priority register H IPRH"/>
+    <symbol name="IPRI" address="0xFFFFED10" size="2" description="Interrupt priority register I IPRI"/>
+    <symbol name="IPRJ" address="0xFFFFED12" size="2" description="Interrupt priority register J IPRJ"/>
+    <symbol name="IPRK" address="0xFFFFED14" size="2" description="Interrupt priority register K IPRK"/>
+    <symbol name="IPRL" address="0xFFFFED16" size="2" description="Interrupt priority register L IPRL"/>
+    <symbol name="ICR" address="0xFFFFED18" size="2" description="Interrupt control register (NMI)"/>
+    <symbol name="ISR" address="0xFFFFED1A" size="2" description="IRQ status register"/>
+    <!-- SCI -->
+    <symbol name="SMR0" address="0xFFFFF000" size="1" description="Serial mode register 0 SMR0"/>
+    <symbol name="BRR0" address="0xFFFFF001" size="1" description="Bit rate register 0 BRR0"/>
+    <symbol name="SCR0" address="0xFFFFF002" size="1" description="Serial control register 0 SCR0"/>
+    <symbol name="TDR0" address="0xFFFFF003" size="1" description="Transmit data register 0 TDR0"/>
+    <symbol name="SSR0" address="0xFFFFF004" size="1" description="SCI0 serial status register"/>
+    <symbol name="RDR0" address="0xFFFFF005" size="1" description="Receive data register 0 RDR0"/>
+    <symbol name="SDCR0" address="0xFFFFF006" size="1" description="SCI SDCR0"/>
+    <symbol name="SMR1" address="0xFFFFF008" size="1" description="Serial mode register 1 SMR1"/>
+    <symbol name="BRR1" address="0xFFFFF009" size="1" description="Bit rate register 1 BRR1"/>
+    <symbol name="SCR1" address="0xFFFFF00A" size="1" description="Serial control register 1 SCR1"/>
+    <symbol name="TDR1" address="0xFFFFF00B" size="1" description="Transmit data register 1 TDR1"/>
+    <symbol name="SSR1" address="0xFFFFF00C" size="1" description="SCI1 serial status register"/>
+    <symbol name="RDR1" address="0xFFFFF00D" size="1" description="Receive data register 1 RDR1"/>
+    <symbol name="SDCR1" address="0xFFFFF00E" size="1" description="SCI SDCR1"/>
+    <symbol name="SMR2" address="0xFFFFF010" size="1" description="Serial mode register 2 SMR2"/>
+    <symbol name="BRR2" address="0xFFFFF011" size="1" description="Bit rate register 2 BRR2"/>
+    <symbol name="SCR2" address="0xFFFFF012" size="1" description="Serial control register 2 SCR2"/>
+    <symbol name="TDR2" address="0xFFFFF013" size="1" description="Transmit data register 2 TDR2"/>
+    <symbol name="SSR2" address="0xFFFFF014" size="1" description="SCI2 serial status register"/>
+    <symbol name="RDR2" address="0xFFFFF015" size="1" description="Receive data register 2 RDR2"/>
+    <symbol name="SDCR2" address="0xFFFFF016" size="1" description="SCI SDCR2"/>
+    <symbol name="SMR3" address="0xFFFFF018" size="1" description="Serial mode register 3 SMR3"/>
+    <symbol name="BRR3" address="0xFFFFF019" size="1" description="Bit rate register 3 BRR3"/>
+    <symbol name="SCR3" address="0xFFFFF01A" size="1" description="Serial control register 3 SCR3"/>
+    <symbol name="TDR3" address="0xFFFFF01B" size="1" description="Transmit data register 3 TDR3"/>
+    <symbol name="SSR3" address="0xFFFFF01C" size="1" description="SCI3 serial status register"/>
+    <symbol name="RDR3" address="0xFFFFF01D" size="1" description="Receive data register 3 RDR3"/>
+    <symbol name="SDCR3" address="0xFFFFF01E" size="1" description="SCI SDCR3"/>
+    <symbol name="SMR4" address="0xFFFFF020" size="1" description="Serial mode register 4 SMR4"/>
+    <symbol name="BRR4" address="0xFFFFF021" size="1" description="Bit rate register 4 BRR4"/>
+    <symbol name="SCR4" address="0xFFFFF022" size="1" description="Serial control register 4 SCR4"/>
+    <symbol name="TDR4" address="0xFFFFF023" size="1" description="Transmit data register 4 TDR4"/>
+    <symbol name="SSR4" address="0xFFFFF024" size="1" description="SCI4 serial status register"/>
+    <symbol name="RDR4" address="0xFFFFF025" size="1" description="Receive data register 4 RDR4"/>
+    <symbol name="SDCR4" address="0xFFFFF026" size="1" description="SCI SDCR4"/>
+    <!-- ATU-II -->
+    <symbol name="TSTR2" address="0xFFFFF400" size="1" description="Timer start register 2 TSTR2"/>
+    <symbol name="TSTR1" address="0xFFFFF401" size="1" description="Timer start register 1 TSTR1"/>
+    <symbol name="TSTR3" address="0xFFFFF402" size="1" description="Timer start register 3 TSTR3"/>
+    <symbol name="PSCR1" address="0xFFFFF404" size="1" description="Prescaler register 1 PSCR1"/>
+    <symbol name="PSCR2" address="0xFFFFF406" size="1" description="Prescaler register 2 PSCR2"/>
+    <symbol name="PSCR3" address="0xFFFFF408" size="1" description="Prescaler register 3 PSCR3"/>
+    <symbol name="PSCR4" address="0xFFFFF40A" size="1" description="Prescaler register 4 PSCR4"/>
+    <symbol name="ICR0DH" address="0xFFFFF420" size="2" description="ATU-II ch0 input capture register DH (address from Appendix A)"/>
+    <symbol name="ICR0DL" address="0xFFFFF422" size="2" description="ATU-II ch0 input capture register DL (address from Appendix A)"/>
+    <symbol name="ITVRR1" address="0xFFFFF424" size="1" description="ATU-II ITVRR1"/>
+    <symbol name="ITVRR2A" address="0xFFFFF426" size="1" description="ATU-II ITVRR2A"/>
+    <symbol name="ITVRR2B" address="0xFFFFF428" size="1" description="ATU-II ITVRR2B"/>
+    <symbol name="TIOR0" address="0xFFFFF42A" size="1" description="ATU-II TIOR0"/>
+    <symbol name="TSR0" address="0xFFFFF42C" size="2" description="Timer status register 0 TSR0"/>
+    <symbol name="TIER0" address="0xFFFFF42E" size="2" description="ATU-II TIER0"/>
+    <symbol name="TCNT0H" address="0xFFFFF430" size="2" description="ATU-II ch0 timer counter H (32-bit counter, H half)"/>
+    <symbol name="TCNT0L" address="0xFFFFF432" size="2" description="ATU-II ch0 timer counter L (32-bit counter, L half)"/>
+    <symbol name="ICR0AH" address="0xFFFFF434" size="2" description="ATU-II ch0 input capture/output compare register AH"/>
+    <symbol name="ICR0AL" address="0xFFFFF436" size="2" description="ATU-II ch0 input capture/output compare register AL"/>
+    <symbol name="ICR0BH" address="0xFFFFF438" size="2" description="ATU-II ch0 input capture/output compare register BH"/>
+    <symbol name="ICR0BL" address="0xFFFFF43A" size="2" description="ATU-II ch0 input capture/output compare register BL"/>
+    <symbol name="ICR0CH" address="0xFFFFF43C" size="2" description="ATU-II ch0 input capture/output compare register CH"/>
+    <symbol name="ICR0CL" address="0xFFFFF43E" size="2" description="ATU-II ch0 input capture/output compare register CL"/>
+    <symbol name="TCNT1A" address="0xFFFFF440" size="2" description="ATU-II TCNT1A"/>
+    <symbol name="TCNT1B" address="0xFFFFF442" size="2" description="ATU-II TCNT1B"/>
+    <symbol name="GR1A" address="0xFFFFF444" size="2" description="General register 1A GR1A"/>
+    <symbol name="GR1B" address="0xFFFFF446" size="2" description="General register 1B GR1B"/>
+    <symbol name="GR1C" address="0xFFFFF448" size="2" description="General register 1C GR1C"/>
+    <symbol name="GR1D" address="0xFFFFF44A" size="2" description="General register 1D GR1D"/>
+    <symbol name="GR1E" address="0xFFFFF44C" size="2" description="General register 1E GR1E"/>
+    <symbol name="GR1F" address="0xFFFFF44E" size="2" description="General register 1F GR1F"/>
+    <symbol name="GR1G" address="0xFFFFF450" size="2" description="General register 1G GR1G"/>
+    <symbol name="GR1H" address="0xFFFFF452" size="2" description="General register 1H GR1H"/>
+    <symbol name="OCR1" address="0xFFFFF454" size="2" description="ATU-II OCR1"/>
+    <symbol name="OSBR1" address="0xFFFFF456" size="2" description="Offset base register 1 OSBR1"/>
+    <symbol name="TIOR1B" address="0xFFFFF458" size="1" description="ATU-II TIOR1B"/>
+    <symbol name="TIOR1A" address="0xFFFFF459" size="1" description="ATU-II TIOR1A"/>
+    <symbol name="TIOR1D" address="0xFFFFF45A" size="1" description="ATU-II TIOR1D"/>
+    <symbol name="TIOR1C" address="0xFFFFF45B" size="1" description="ATU-II TIOR1C"/>
+    <symbol name="TCR1B" address="0xFFFFF45C" size="1" description="ATU-II TCR1B"/>
+    <symbol name="TCR1A" address="0xFFFFF45D" size="1" description="ATU-II TCR1A"/>
+    <symbol name="TSR1A" address="0xFFFFF45E" size="2" description="ATU-II TSR1A"/>
+    <symbol name="TSR1B" address="0xFFFFF460" size="2" description="ATU-II TSR1B"/>
+    <symbol name="TIER1A" address="0xFFFFF462" size="2" description="ATU-II TIER1A"/>
+    <symbol name="TIER1B" address="0xFFFFF464" size="2" description="ATU-II TIER1B"/>
+    <symbol name="TRGMDR" address="0xFFFFF466" size="1" description="Trigger mode register TRGMDR"/>
+    <symbol name="TSR3" address="0xFFFFF480" size="2" description="Timer status register 3 TSR3"/>
+    <symbol name="TIER3" address="0xFFFFF482" size="2" description="ATU-II TIER3"/>
+    <symbol name="TMDR" address="0xFFFFF484" size="1" description="Timer mode register TMDR"/>
+    <symbol name="TCNT3" address="0xFFFFF4A0" size="2" description="Free-running counter 3 TCNT3"/>
+    <symbol name="GR3A" address="0xFFFFF4A2" size="2" description="General register 3A GR3A"/>
+    <symbol name="GR3B" address="0xFFFFF4A4" size="2" description="General register 3B GR3B"/>
+    <symbol name="GR3C" address="0xFFFFF4A6" size="2" description="General register 3C GR3C"/>
+    <symbol name="GR3D" address="0xFFFFF4A8" size="2" description="General register 3D GR3D"/>
+    <symbol name="TIOR3B" address="0xFFFFF4AA" size="1" description="ATU-II TIOR3B"/>
+    <symbol name="TIOR3A" address="0xFFFFF4AB" size="1" description="ATU-II TIOR3A"/>
+    <symbol name="TCR3" address="0xFFFFF4AC" size="1" description="Timer control register 3 TCR3"/>
+    <symbol name="TCNT4" address="0xFFFFF4C0" size="2" description="Free-running counter 4 TCNT4"/>
+    <symbol name="GR4A" address="0xFFFFF4C2" size="2" description="General register 4A GR4A"/>
+    <symbol name="GR4B" address="0xFFFFF4C4" size="2" description="General register 4B GR4B"/>
+    <symbol name="GR4C" address="0xFFFFF4C6" size="2" description="General register 4C GR4C"/>
+    <symbol name="GR4D" address="0xFFFFF4C8" size="2" description="General register 4D GR4D"/>
+    <symbol name="TIOR4B" address="0xFFFFF4CA" size="1" description="ATU-II TIOR4B"/>
+    <symbol name="TIOR4A" address="0xFFFFF4CB" size="1" description="ATU-II TIOR4A"/>
+    <symbol name="TCR4" address="0xFFFFF4CC" size="1" description="Timer control register 4 TCR4"/>
+    <symbol name="TCNT5" address="0xFFFFF4E0" size="2" description="Free-running counter 5 TCNT5"/>
+    <symbol name="GR5A" address="0xFFFFF4E2" size="2" description="General register 5A GR5A"/>
+    <symbol name="GR5B" address="0xFFFFF4E4" size="2" description="General register 5B GR5B"/>
+    <symbol name="GR5C" address="0xFFFFF4E6" size="2" description="General register 5C GR5C"/>
+    <symbol name="GR5D" address="0xFFFFF4E8" size="2" description="General register 5D GR5D"/>
+    <symbol name="TIOR5B" address="0xFFFFF4EA" size="1" description="ATU-II TIOR5B"/>
+    <symbol name="TIOR5A" address="0xFFFFF4EB" size="1" description="ATU-II TIOR5A"/>
+    <symbol name="TCR5" address="0xFFFFF4EC" size="1" description="Timer control register 5 TCR5"/>
+    <symbol name="TCNT6A" address="0xFFFFF500" size="2" description="ATU-II TCNT6A"/>
+    <symbol name="TCNT6B" address="0xFFFFF502" size="2" description="ATU-II TCNT6B"/>
+    <symbol name="TCNT6C" address="0xFFFFF504" size="2" description="ATU-II TCNT6C"/>
+    <symbol name="TCNT6D" address="0xFFFFF506" size="2" description="ATU-II TCNT6D"/>
+    <symbol name="CYLR6A" address="0xFFFFF508" size="2" description="Cycle register 6A CYLR6A"/>
+    <symbol name="CYLR6B" address="0xFFFFF50A" size="2" description="Cycle register 6B CYLR6B"/>
+    <symbol name="CYLR6C" address="0xFFFFF50C" size="2" description="Cycle register 6C CYLR6C"/>
+    <symbol name="CYLR6D" address="0xFFFFF50E" size="2" description="Cycle register 6D CYLR6D"/>
+    <symbol name="BFR6A" address="0xFFFFF510" size="2" description="Buffer register 6A BFR6A"/>
+    <symbol name="BFR6B" address="0xFFFFF512" size="2" description="Buffer register 6B BFR6B"/>
+    <symbol name="BFR6C" address="0xFFFFF514" size="2" description="Buffer register 6C BFR6C"/>
+    <symbol name="BFR6D" address="0xFFFFF516" size="2" description="Buffer register 6D BFR6D"/>
+    <symbol name="DTR6A" address="0xFFFFF518" size="2" description="Duty register 6A DTR6A"/>
+    <symbol name="DTR6B" address="0xFFFFF51A" size="2" description="Duty register 6B DTR6B"/>
+    <symbol name="DTR6C" address="0xFFFFF51C" size="2" description="Duty register 6C DTR6C"/>
+    <symbol name="DTR6D" address="0xFFFFF51E" size="2" description="Duty register 6D DTR6D"/>
+    <symbol name="TCR6B" address="0xFFFFF520" size="1" description="ATU-II TCR6B"/>
+    <symbol name="TCR6A" address="0xFFFFF521" size="1" description="ATU-II TCR6A"/>
+    <symbol name="TSR6" address="0xFFFFF522" size="2" description="Timer status register 6 TSR6"/>
+    <symbol name="TIER6" address="0xFFFFF524" size="2" description="ATU-II TIER6"/>
+    <symbol name="PMDR" address="0xFFFFF526" size="1" description="PWM mode register PMDR"/>
+    <symbol name="TCNT7A" address="0xFFFFF580" size="2" description="ATU-II TCNT7A"/>
+    <symbol name="TCNT7B" address="0xFFFFF582" size="2" description="ATU-II TCNT7B"/>
+    <symbol name="TCNT7C" address="0xFFFFF584" size="2" description="ATU-II TCNT7C"/>
+    <symbol name="TCNT7D" address="0xFFFFF586" size="2" description="ATU-II TCNT7D"/>
+    <symbol name="CYLR7A" address="0xFFFFF588" size="2" description="Cycle register 7A CYLR7A"/>
+    <symbol name="CYLR7B" address="0xFFFFF58A" size="2" description="Cycle register 7B CYLR7B"/>
+    <symbol name="CYLR7C" address="0xFFFFF58C" size="2" description="Cycle register 7C CYLR7C"/>
+    <symbol name="CYLR7D" address="0xFFFFF58E" size="2" description="Cycle register 7D CYLR7D"/>
+    <symbol name="BFR7A" address="0xFFFFF590" size="2" description="Buffer register 7A BFR7A"/>
+    <symbol name="BFR7B" address="0xFFFFF592" size="2" description="Buffer register 7B BFR7B"/>
+    <symbol name="BFR7C" address="0xFFFFF594" size="2" description="Buffer register 7C BFR7C"/>
+    <symbol name="BFR7D" address="0xFFFFF596" size="2" description="Buffer register 7D BFR7D"/>
+    <symbol name="DTR7A" address="0xFFFFF598" size="2" description="Duty register 7A DTR7A"/>
+    <symbol name="DTR7B" address="0xFFFFF59A" size="2" description="Duty register 7B DTR7B"/>
+    <symbol name="DTR7C" address="0xFFFFF59C" size="2" description="Duty register 7C DTR7C"/>
+    <symbol name="DTR7D" address="0xFFFFF59E" size="2" description="Duty register 7D DTR7D"/>
+    <symbol name="TCR7B" address="0xFFFFF5A0" size="1" description="ATU-II TCR7B"/>
+    <symbol name="TCR7A" address="0xFFFFF5A1" size="1" description="ATU-II TCR7A"/>
+    <symbol name="TSR7" address="0xFFFFF5A2" size="2" description="ATU-II TSR7"/>
+    <symbol name="TIER7" address="0xFFFFF5A4" size="2" description="ATU-II TIER7"/>
+    <symbol name="TCNT11" address="0xFFFFF5C0" size="2" description="ATU-II TCNT11"/>
+    <symbol name="GR11A" address="0xFFFFF5C2" size="2" description="General register 11A GR11A"/>
+    <symbol name="GR11B" address="0xFFFFF5C4" size="2" description="General register 11B GR11B"/>
+    <symbol name="TIOR11" address="0xFFFFF5C6" size="1" description="ATU-II TIOR11"/>
+    <symbol name="TCR11" address="0xFFFFF5C8" size="1" description="ATU-II TCR11"/>
+    <symbol name="TSR11" address="0xFFFFF5CA" size="2" description="ATU-II TSR11"/>
+    <symbol name="TIER11" address="0xFFFFF5CC" size="2" description="ATU-II TIER11"/>
+    <symbol name="TCNT2A" address="0xFFFFF600" size="2" description="ATU-II TCNT2A"/>
+    <symbol name="TCNT2B" address="0xFFFFF602" size="2" description="ATU-II TCNT2B"/>
+    <symbol name="GR2A" address="0xFFFFF604" size="2" description="General register 2A GR2A"/>
+    <symbol name="GR2B" address="0xFFFFF606" size="2" description="General register 2B GR2B"/>
+    <symbol name="GR2C" address="0xFFFFF608" size="2" description="General register 2C GR2C"/>
+    <symbol name="GR2D" address="0xFFFFF60A" size="2" description="General register 2D GR2D"/>
+    <symbol name="GR2E" address="0xFFFFF60C" size="2" description="General register 2E GR2E"/>
+    <symbol name="GR2F" address="0xFFFFF60E" size="2" description="General register 2F GR2F"/>
+    <symbol name="GR2G" address="0xFFFFF610" size="2" description="General register 2G GR2G"/>
+    <symbol name="GR2H" address="0xFFFFF612" size="2" description="General register 2H GR2H"/>
+    <symbol name="OCR2A" address="0xFFFFF614" size="2" description="ATU-II OCR2A"/>
+    <symbol name="OCR2B" address="0xFFFFF616" size="2" description="ATU-II OCR2B"/>
+    <symbol name="OCR2C" address="0xFFFFF618" size="2" description="ATU-II OCR2C"/>
+    <symbol name="OCR2D" address="0xFFFFF61A" size="2" description="ATU-II OCR2D"/>
+    <symbol name="OCR2E" address="0xFFFFF61C" size="2" description="ATU-II OCR2E"/>
+    <symbol name="OCR2F" address="0xFFFFF61E" size="2" description="ATU-II OCR2F"/>
+    <symbol name="OCR2G" address="0xFFFFF620" size="2" description="ATU-II OCR2G"/>
+    <symbol name="OCR2H" address="0xFFFFF622" size="2" description="ATU-II OCR2H"/>
+    <symbol name="OSBR2" address="0xFFFFF624" size="2" description="Offset base register 2 OSBR2"/>
+    <symbol name="TIOR2B" address="0xFFFFF626" size="1" description="ATU-II TIOR2B"/>
+    <symbol name="TIOR2A" address="0xFFFFF627" size="1" description="ATU-II TIOR2A"/>
+    <symbol name="TIOR2D" address="0xFFFFF628" size="1" description="ATU-II TIOR2D"/>
+    <symbol name="TIOR2C" address="0xFFFFF629" size="1" description="ATU-II TIOR2C"/>
+    <symbol name="TCR2B" address="0xFFFFF62A" size="1" description="ATU-II TCR2B"/>
+    <symbol name="TCR2A" address="0xFFFFF62B" size="1" description="ATU-II TCR2A"/>
+    <symbol name="TSR2A" address="0xFFFFF62C" size="2" description="ATU-II TSR2A"/>
+    <symbol name="TSR2B" address="0xFFFFF62E" size="2" description="ATU-II TSR2B"/>
+    <symbol name="TIER2A" address="0xFFFFF630" size="2" description="ATU-II TIER2A"/>
+    <symbol name="TIER2B" address="0xFFFFF632" size="2" description="ATU-II TIER2B"/>
+    <symbol name="DCNT8A" address="0xFFFFF640" size="2" description="Down-counter 8A DCNT8A"/>
+    <symbol name="DCNT8B" address="0xFFFFF642" size="2" description="Down-counter 8B DCNT8B"/>
+    <symbol name="DCNT8C" address="0xFFFFF644" size="2" description="Down-counter 8C DCNT8C"/>
+    <symbol name="DCNT8D" address="0xFFFFF646" size="2" description="Down-counter 8D DCNT8D"/>
+    <symbol name="DCNT8E" address="0xFFFFF648" size="2" description="Down-counter 8E DCNT8E"/>
+    <symbol name="DCNT8F" address="0xFFFFF64A" size="2" description="Down-counter 8F DCNT8F"/>
+    <symbol name="DCNT8G" address="0xFFFFF64C" size="2" description="Down-counter 8G DCNT8G"/>
+    <symbol name="DCNT8H" address="0xFFFFF64E" size="2" description="Down-counter 8H DCNT8H"/>
+    <symbol name="DCNT8I" address="0xFFFFF650" size="2" description="Down-counter 8I DCNT8I"/>
+    <symbol name="DCNT8J" address="0xFFFFF652" size="2" description="Down-counter 8J DCNT8J"/>
+    <symbol name="DCNT8K" address="0xFFFFF654" size="2" description="Down-counter 8K DCNT8K"/>
+    <symbol name="DCNT8L" address="0xFFFFF656" size="2" description="Down-counter 8L DCNT8L"/>
+    <symbol name="DCNT8M" address="0xFFFFF658" size="2" description="Down-counter 8M DCNT8M"/>
+    <symbol name="DCNT8N" address="0xFFFFF65A" size="2" description="Down-counter 8N DCNT8N"/>
+    <symbol name="DCNT8O" address="0xFFFFF65C" size="2" description="Down-counter 8O DCNT8O"/>
+    <symbol name="DCNT8P" address="0xFFFFF65E" size="2" description="Down-counter 8P DCNT8P"/>
+    <symbol name="RLDR8" address="0xFFFFF660" size="2" description="Reload register 8 RLDR8"/>
+    <symbol name="TCNR" address="0xFFFFF662" size="2" description="ATU-II TCNR"/>
+    <symbol name="OTR" address="0xFFFFF664" size="2" description="ATU-II OTR"/>
+    <symbol name="DSTR" address="0xFFFFF666" size="2" description="ATU-II DSTR"/>
+    <symbol name="TCR8" address="0xFFFFF668" size="1" description="Timer control register 8 TCR8"/>
+    <symbol name="TSR8" address="0xFFFFF66A" size="2" description="Timer status register 8 TSR8"/>
+    <symbol name="TIER8" address="0xFFFFF66C" size="2" description="ATU-II TIER8"/>
+    <symbol name="RLDENR" address="0xFFFFF66E" size="1" description="Reload enable register RLDENR"/>
+    <symbol name="ECNT9A" address="0xFFFFF680" size="1" description="Event counter 9A ECNT9A"/>
+    <symbol name="ECNT9B" address="0xFFFFF682" size="1" description="Event counter 9B ECNT9B"/>
+    <symbol name="ECNT9C" address="0xFFFFF684" size="1" description="Event counter 9C ECNT9C"/>
+    <symbol name="ECNT9D" address="0xFFFFF686" size="1" description="Event counter 9D ECNT9D"/>
+    <symbol name="ECNT9E" address="0xFFFFF688" size="1" description="Event counter 9E ECNT9E"/>
+    <symbol name="ECNT9F" address="0xFFFFF68A" size="1" description="Event counter 9F ECNT9F"/>
+    <symbol name="GR9A" address="0xFFFFF68C" size="1" description="General register 9A GR9A"/>
+    <symbol name="GR9B" address="0xFFFFF68E" size="1" description="General register 9B GR9B"/>
+    <symbol name="GR9C" address="0xFFFFF690" size="1" description="General register 9C GR9C"/>
+    <symbol name="GR9D" address="0xFFFFF692" size="1" description="General register 9D GR9D"/>
+    <symbol name="GR9E" address="0xFFFFF694" size="1" description="General register 9E GR9E"/>
+    <symbol name="GR9F" address="0xFFFFF696" size="1" description="General register 9F GR9F"/>
+    <symbol name="TCR9A" address="0xFFFFF698" size="1" description="ATU-II TCR9A"/>
+    <symbol name="TCR9B" address="0xFFFFF69A" size="1" description="ATU-II TCR9B"/>
+    <symbol name="TCR9C" address="0xFFFFF69C" size="1" description="ATU-II TCR9C"/>
+    <symbol name="TSR9" address="0xFFFFF69E" size="2" description="Timer status register 9 TSR9"/>
+    <symbol name="TIER9" address="0xFFFFF6A0" size="2" description="ATU-II TIER9"/>
+    <symbol name="TCNT10A" address="0xFFFFF6C0" size="4" description="ATU-II ch10 timer counter A (32-bit)"/>
+    <symbol name="TCNT10B" address="0xFFFFF6C4" size="1" description="Event counter 10B TCNT10B"/>
+    <symbol name="TCNT10C" address="0xFFFFF6C6" size="2" description="Reload counter 10C TCNT10C"/>
+    <symbol name="TCNT10D" address="0xFFFFF6C8" size="1" description="ATU-II TCNT10D"/>
+    <symbol name="TCNT10E" address="0xFFFFF6CA" size="2" description="ATU-II TCNT10E"/>
+    <symbol name="TCNT10F" address="0xFFFFF6CC" size="2" description="ATU-II TCNT10F"/>
+    <symbol name="TCNT10G" address="0xFFFFF6CE" size="2" description="ATU-II TCNT10G"/>
+    <symbol name="ICR10AH" address="0xFFFFF6D0" size="2" description="ATU-II ch10 input capture register AH (address inferred from Appendix A ordering)"/>
+    <symbol name="ICR10AL" address="0xFFFFF6D2" size="2" description="ATU-II ch10 input capture register AL (address inferred)"/>
+    <symbol name="OCR10AH" address="0xFFFFF6D4" size="2" description="ATU-II ch10 output compare register AH (address inferred)"/>
+    <symbol name="OCR10AL" address="0xFFFFF6D6" size="2" description="ATU-II ch10 output compare register AL (address inferred)"/>
+    <symbol name="OCR10B" address="0xFFFFF6D8" size="1" description="ATU-II OCR10B"/>
+    <symbol name="RLD10C" address="0xFFFFF6DA" size="2" description="Reload register 10C RLD10C"/>
+    <symbol name="GR10G" address="0xFFFFF6DC" size="2" description="General register 10G GR10G"/>
+    <symbol name="TCNT10H" address="0xFFFFF6DE" size="1" description="ATU-II TCNT10H"/>
+    <symbol name="NCR10" address="0xFFFFF6E0" size="1" description="ATU-II NCR10"/>
+    <symbol name="TIOR10" address="0xFFFFF6E2" size="1" description="ATU-II TIOR10"/>
+    <symbol name="TCR10" address="0xFFFFF6E4" size="1" description="ATU-II TCR10"/>
+    <symbol name="TCCLR10" address="0xFFFFF6E6" size="2" description="ATU-II TCCLR10"/>
+    <symbol name="TSR10" address="0xFFFFF6E8" size="2" description="ATU-II TSR10"/>
+    <symbol name="TIER10" address="0xFFFFF6EA" size="2" description="ATU-II TIER10"/>
+    <!-- SYSTEM/APC -->
+    <symbol name="POPCR" address="0xFFFFF700" size="2" description="Pulse output port control register (APC); bits PULS7RO-PULS0RO / PULS7SO-PULS0SO"/>
+    <symbol name="SYSCR1" address="0xFFFFF708" size="1" description="System control register 1 SYSCR1"/>
+    <symbol name="SYSCR2_W" address="0xFFFFF70A" size="2" description="System control register 2, write address (word write only)"/>
+    <symbol name="SYSCR2" address="0xFFFFF70B" size="1" description="System control register 2, read address (byte read only)"/>
+    <!-- CMT -->
+    <symbol name="CMSTR" address="0xFFFFF710" size="2" description="CMT CMSTR"/>
+    <symbol name="CMCSR0" address="0xFFFFF712" size="2" description="CMT CMCSR0"/>
+    <symbol name="CMCNT0" address="0xFFFFF714" size="2" description="CMT CMCNT0"/>
+    <symbol name="CMCOR0" address="0xFFFFF716" size="2" description="CMT CMCOR0"/>
+    <symbol name="CMCSR1" address="0xFFFFF718" size="2" description="CMT CMCSR1"/>
+    <symbol name="CMCNT1" address="0xFFFFF71A" size="2" description="CMT CMCNT1"/>
+    <symbol name="CMCOR1" address="0xFFFFF71C" size="2" description="CMT CMCOR1"/>
+    <!-- PFC/IO-PORTS -->
+    <symbol name="PAIOR" address="0xFFFFF720" size="2" description="Port A IO register PAIOR"/>
+    <symbol name="PACRH" address="0xFFFFF722" size="2" description="Port A control register H PACRH"/>
+    <symbol name="PACRL" address="0xFFFFF724" size="2" description="Port A control register L PACRL"/>
+    <symbol name="PADR" address="0xFFFFF726" size="2" description="Port A data register PADR"/>
+    <symbol name="PHIOR" address="0xFFFFF728" size="2" description="Port H IO register PHIOR"/>
+    <symbol name="PHCR" address="0xFFFFF72A" size="2" description="Port H control register PHCR"/>
+    <symbol name="PHDR" address="0xFFFFF72C" size="2" description="Port H data register PHDR"/>
+    <!-- A/D -->
+    <symbol name="ADTRGR1" address="0xFFFFF72E" size="1" description="A/D trigger register 1 ADTRGR1"/>
+    <symbol name="ADTRGR2" address="0xFFFFF72F" size="1" description="A/D trigger register 2 ADTRGR2"/>
+    <!-- PFC/IO-PORTS -->
+    <symbol name="PBIOR" address="0xFFFFF730" size="2" description="Port B IO register PBIOR"/>
+    <symbol name="PBCRH" address="0xFFFFF732" size="2" description="Port B control register H PBCRH"/>
+    <symbol name="PBCRL" address="0xFFFFF734" size="2" description="Port B control register L PBCRL"/>
+    <symbol name="PBIR" address="0xFFFFF736" size="2" description="Port B invert register PBIR"/>
+    <symbol name="PBDR" address="0xFFFFF738" size="2" description="Port B data register PBDR"/>
+    <symbol name="PCIOR" address="0xFFFFF73A" size="2" description="Port C IO register PCIOR"/>
+    <symbol name="PCCR" address="0xFFFFF73C" size="2" description="Port C control register PCCR"/>
+    <symbol name="PCDR" address="0xFFFFF73E" size="2" description="Port C data register PCDR"/>
+    <symbol name="PDIOR" address="0xFFFFF740" size="2" description="Port D IO register PDIOR"/>
+    <symbol name="PDCRH" address="0xFFFFF742" size="2" description="Port D control register H PDCRH"/>
+    <symbol name="PDCRL" address="0xFFFFF744" size="2" description="Port D control register L PDCRL"/>
+    <symbol name="PDDR" address="0xFFFFF746" size="2" description="Port D data register PDDR"/>
+    <symbol name="PFIOR" address="0xFFFFF748" size="2" description="Port F IO register PFIOR"/>
+    <symbol name="PFCRH" address="0xFFFFF74A" size="2" description="Port F control register H PFCRH"/>
+    <symbol name="PFCRL" address="0xFFFFF74C" size="2" description="Port F control register L PFCRL"/>
+    <symbol name="PFDR" address="0xFFFFF74E" size="2" description="Port F data register PFDR"/>
+    <symbol name="PEIOR" address="0xFFFFF750" size="2" description="Port E IO register PEIOR"/>
+    <symbol name="PECR" address="0xFFFFF752" size="2" description="Port E control register PECR"/>
+    <symbol name="PEDR" address="0xFFFFF754" size="2" description="Port E data register PEDR"/>
+    <symbol name="PLIOR" address="0xFFFFF756" size="2" description="Port L IO register PLIOR"/>
+    <symbol name="PLCRH" address="0xFFFFF758" size="2" description="Port L control register H PLCRH"/>
+    <symbol name="PLCRL" address="0xFFFFF75A" size="2" description="Port L control register L PLCRL"/>
+    <symbol name="PLIR" address="0xFFFFF75C" size="2" description="Port L invert register PLIR"/>
+    <symbol name="PLDR" address="0xFFFFF75E" size="2" description="Port L data register PLDR"/>
+    <symbol name="PGIOR" address="0xFFFFF760" size="2" description="Port G IO register PGIOR"/>
+    <symbol name="PGCR" address="0xFFFFF762" size="2" description="Port G control register PGCR"/>
+    <symbol name="PGDR" address="0xFFFFF764" size="2" description="Port G data register PGDR"/>
+    <symbol name="PJIOR" address="0xFFFFF766" size="2" description="Port J IO register PJIOR"/>
+    <symbol name="PJCRH" address="0xFFFFF768" size="2" description="Port J control register H PJCRH"/>
+    <symbol name="PJCRL" address="0xFFFFF76A" size="2" description="Port J control register L PJCRL"/>
+    <symbol name="PJDR" address="0xFFFFF76C" size="2" description="Port J data register PJDR"/>
+    <!-- A/D -->
+    <symbol name="ADTRGR0" address="0xFFFFF76E" size="1" description="A/D trigger register 0 ADTRGR0"/>
+    <!-- PFC/IO-PORTS -->
+    <symbol name="PKIOR" address="0xFFFFF770" size="2" description="Port K IO register PKIOR"/>
+    <symbol name="PKCRH" address="0xFFFFF772" size="2" description="Port K control register H PKCRH"/>
+    <symbol name="PKCRL" address="0xFFFFF774" size="2" description="Port K control register L PKCRL"/>
+    <symbol name="PKIR" address="0xFFFFF776" size="2" description="Port K invert register PKIR"/>
+    <symbol name="PKDR" address="0xFFFFF778" size="2" description="Port K data register PKDR"/>
+    <symbol name="PAPR" address="0xFFFFF780" size="2" description="Port A port register (pin values)"/>
+    <symbol name="PBPR" address="0xFFFFF782" size="2" description="Port B port register (pin values)"/>
+    <symbol name="PDPR" address="0xFFFFF784" size="2" description="Port D port register (pin values)"/>
+    <symbol name="PJPR" address="0xFFFFF786" size="2" description="Port J port register (pin values)"/>
+    <symbol name="PLPR" address="0xFFFFF788" size="2" description="Port L port register (pin values)"/>
+    <!-- H-UDI -->
+    <symbol name="SDIR" address="0xFFFFF7C0" size="2" description="Instruction register SDIR"/>
+    <symbol name="SDSR" address="0xFFFFF7C2" size="2" description="Status register SDSR"/>
+    <symbol name="SDDRH" address="0xFFFFF7C4" size="2" description="Data register H SDDRH"/>
+    <symbol name="SDDRL" address="0xFFFFF7C6" size="2" description="Data register L SDDRL"/>
+    <!-- A/D -->
+    <symbol name="ADDR0" address="0xFFFFF800" size="2" description="A/D data register 0 ADDR0"/>
+    <symbol name="ADDR1" address="0xFFFFF802" size="2" description="A/D data register 1 ADDR1"/>
+    <symbol name="ADDR2" address="0xFFFFF804" size="2" description="A/D data register 2 ADDR2"/>
+    <symbol name="ADDR3" address="0xFFFFF806" size="2" description="A/D data register 3 ADDR3"/>
+    <symbol name="ADDR4" address="0xFFFFF808" size="2" description="A/D data register 4 ADDR4"/>
+    <symbol name="ADDR5" address="0xFFFFF80A" size="2" description="A/D data register 5 ADDR5"/>
+    <symbol name="ADDR6" address="0xFFFFF80C" size="2" description="A/D data register 6 ADDR6"/>
+    <symbol name="ADDR7" address="0xFFFFF80E" size="2" description="A/D data register 7 ADDR7"/>
+    <symbol name="ADDR8" address="0xFFFFF810" size="2" description="A/D data register 8 ADDR8"/>
+    <symbol name="ADDR9" address="0xFFFFF812" size="2" description="A/D data register 9 ADDR9"/>
+    <symbol name="ADDR10" address="0xFFFFF814" size="2" description="A/D data register 10 ADDR10"/>
+    <symbol name="ADDR11" address="0xFFFFF816" size="2" description="A/D data register 11 ADDR11"/>
+    <symbol name="ADCSR0" address="0xFFFFF818" size="1" description="A/D control/status register 0"/>
+    <symbol name="ADCR0" address="0xFFFFF819" size="1" description="A/D control register 0 ADCR0"/>
+    <symbol name="ADDR12" address="0xFFFFF820" size="2" description="A/D data register 12 ADDR12"/>
+    <symbol name="ADDR13" address="0xFFFFF822" size="2" description="A/D data register 13 ADDR13"/>
+    <symbol name="ADDR14" address="0xFFFFF824" size="2" description="A/D data register 14 ADDR14"/>
+    <symbol name="ADDR15" address="0xFFFFF826" size="2" description="A/D data register 15 ADDR15"/>
+    <symbol name="ADDR16" address="0xFFFFF828" size="2" description="A/D data register 16 ADDR16"/>
+    <symbol name="ADDR17" address="0xFFFFF82A" size="2" description="A/D data register 17 ADDR17"/>
+    <symbol name="ADDR18" address="0xFFFFF82C" size="2" description="A/D data register 18 ADDR18"/>
+    <symbol name="ADDR19" address="0xFFFFF82E" size="2" description="A/D data register 19 ADDR19"/>
+    <symbol name="ADDR20" address="0xFFFFF830" size="2" description="A/D data register 20 ADDR20"/>
+    <symbol name="ADDR21" address="0xFFFFF832" size="2" description="A/D data register 21 ADDR21"/>
+    <symbol name="ADDR22" address="0xFFFFF834" size="2" description="A/D data register 22 ADDR22"/>
+    <symbol name="ADDR23" address="0xFFFFF836" size="2" description="A/D data register 23 ADDR23"/>
+    <symbol name="ADCSR1" address="0xFFFFF838" size="1" description="A/D control/status register 1"/>
+    <symbol name="ADCR1" address="0xFFFFF839" size="1" description="A/D control register 1 ADCR1"/>
+    <symbol name="ADDR24" address="0xFFFFF840" size="2" description="A/D data register 24 ADDR24"/>
+    <symbol name="ADDR25" address="0xFFFFF842" size="2" description="A/D data register 25 ADDR25"/>
+    <symbol name="ADDR26" address="0xFFFFF844" size="2" description="A/D data register 26 ADDR26"/>
+    <symbol name="ADDR27" address="0xFFFFF846" size="2" description="A/D data register 27 ADDR27"/>
+    <symbol name="ADDR28" address="0xFFFFF848" size="2" description="A/D data register 28 ADDR28"/>
+    <symbol name="ADDR29" address="0xFFFFF84A" size="2" description="A/D data register 29 ADDR29"/>
+    <symbol name="ADDR30" address="0xFFFFF84C" size="2" description="A/D data register 30 ADDR30"/>
+    <symbol name="ADDR31" address="0xFFFFF84E" size="2" description="A/D data register 31 ADDR31"/>
+    <symbol name="ADCSR2" address="0xFFFFF858" size="1" description="A/D control/status register 2"/>
+    <symbol name="ADCR2" address="0xFFFFF859" size="1" description="A/D control register 2 ADCR2"/>
+    <!-- MTAD -->
+    <symbol name="ADCNT0" address="0xFFFFF860" size="2" description="MTAD ADCNT0"/>
+    <symbol name="ADCYLR0" address="0xFFFFF862" size="2" description="MTAD ADCYLR0"/>
+    <symbol name="ADDR0A" address="0xFFFFF864" size="2" description="MTAD ADDR0A"/>
+    <symbol name="ADDR0B" address="0xFFFFF866" size="2" description="MTAD ADDR0B"/>
+    <symbol name="ADGR0A" address="0xFFFFF868" size="2" description="MTAD ADGR0A"/>
+    <symbol name="ADGR0B" address="0xFFFFF86A" size="2" description="MTAD ADGR0B"/>
+    <symbol name="ADTCR0" address="0xFFFFF86C" size="1" description="MTAD ADTCR0"/>
+    <symbol name="ADTSR0" address="0xFFFFF86D" size="1" description="MTAD ADTSR0"/>
+    <symbol name="ADTIER0" address="0xFFFFF86E" size="1" description="MTAD ADTIER0"/>
+    <symbol name="ADCNT1" address="0xFFFFF870" size="2" description="MTAD ADCNT1"/>
+    <symbol name="ADCYLR1" address="0xFFFFF872" size="2" description="MTAD ADCYLR1"/>
+    <symbol name="ADDR1A" address="0xFFFFF874" size="2" description="MTAD ADDR1A"/>
+    <symbol name="ADDR1B" address="0xFFFFF876" size="2" description="MTAD ADDR1B"/>
+    <symbol name="ADGR1A" address="0xFFFFF878" size="2" description="MTAD ADGR1A"/>
+    <symbol name="ADGR1B" address="0xFFFFF87A" size="2" description="MTAD ADGR1B"/>
+    <symbol name="ADTCR1" address="0xFFFFF87C" size="1" description="MTAD ADTCR1"/>
+    <symbol name="ADTSR1" address="0xFFFFF87D" size="1" description="MTAD ADTSR1"/>
+    <symbol name="ADTIER1" address="0xFFFFF87E" size="1" description="MTAD ADTIER1"/>
+  </default_symbols>
+
+  <default_memory_blocks>
+    <memory_block name="RAM" start_address="0xFFFF0000" length="0xC000" mode="rwx" initialized="false"/>
+    <memory_block name="IO" start_address="0xFFFFC000" length="0x4000" mode="rwv" initialized="false"/>
+  </default_memory_blocks>
+</processor_spec>

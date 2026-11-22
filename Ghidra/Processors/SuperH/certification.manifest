@@ -5,6 +5,7 @@ data/languages/sh-1.slaspec||GHIDRA||||END|
 data/languages/sh-2.slaspec||GHIDRA||||END|
 data/languages/sh-2a.slaspec||GHIDRA||||END|
 data/languages/sh-2e.slaspec||GHIDRA||||END|
+data/languages/sh7058.pspec||GHIDRA||||END|
 data/languages/superh.cspec||GHIDRA||||END|
 data/languages/superh.ldefs||GHIDRA||||END|
 data/languages/superh.pspec||GHIDRA||||END|

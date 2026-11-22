@@ -91,6 +91,10 @@ class Merge {
   static bool mergeTestSpeculative(HighVariable *high_out,HighVariable *high_in);
   static void mergeTestMust(Varnode *vn);
   static bool mergeTestBasic(Varnode *vn);
+  static bool writeReachesCopy(PcodeOp *defOp,HighVariable *high_in,HighVariable *high_out);
+  static bool mergeTestGlobalCopy(PcodeOp *op,HighVariable *high_out,HighVariable *high_in);
+  static bool markerWriteReaches(PcodeOp *defOp,PcodeOp *targetOp,FlowBlock *targetBlock,HighVariable *high_out);
+  static bool mergeTestGlobalMarker(PcodeOp *op,int4 slot);
   static void findSingleCopy(HighVariable *high,vector<Varnode *> &singlelist);
   static bool compareHighByBlock(const HighVariable *a,const HighVariable *b);
   static bool compareCopyByInVarnode(PcodeOp *op1,PcodeOp *op2);

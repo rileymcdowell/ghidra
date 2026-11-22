@@ -12,6 +12,31 @@ define register offset=0 size=4
 
 define register offset=0x100 size=4 [sr gbr vbr mach macl pr pc];
 
+# imask mirrors SR.I3-I0 (SR bits 7-4, the interrupt mask). LDC/LDC.L to SR and RTE write both
+# sr and imask; STC/STC.L SR and TRAPA read the I bits from imask. The flags (T, S, Q, M) stay in
+# sr. imask exists so that a compiler spec can list it as <global>: the decompiler then keeps
+# interrupt-mask writes (otherwise an LDC to SR is removed as a dead register write), without
+# the noise that making all of sr global causes (every T-bit update would become a global write).
+#
+# SH-2E (SH_VERSION "2" with FPU, i.e. sh-2e.slaspec) differs: imask is write-only. sr keeps the
+# I bits that LDC/RTE load, and STC/STC.L SR and TRAPA read SR from sr (masked with 0x0FFF0FFF,
+# the LDC mask, SH-2E programming manual 7.2.26). sh7058.pspec marks imask volatile, so for the
+# SH7058 the decompiler prints every LDC/RTE write as "imask = ...", including a write that is
+# overwritten before any read (a raise/restore bracket) or followed by an infinite loop, which a
+# <global> register cannot keep. Volatile reads would each add a temporary (and stop constant
+# propagation through the mask), which is why nothing reads imask there. The mask on the read
+# also keeps an STC result that is passed to a call a recognisable argument (a bare copy of the
+# sr input is not taken as a parameter). The generic SH-2E language shares superh.pspec with
+# SH-1/2/2A, so it only gets the <global> behaviour.
+define register offset=0x140 size=1 [imask];
+
+@if (SH_VERSION == "2") && defined(FPU)
+@define SH2E "1"
+@define SR_VALUE "(sr & 0x0FFF0FFF)"
+@else
+@define SR_VALUE "((sr & 0xFFFFFF0F) | (zext(imask) << 4))"
+@endif
+
 
 @if SH_VERSION == "2A"
 define register offset=0x180 size=4 [tbr];
@@ -129,6 +154,7 @@ define token finstr16(16)
     fop_00_07 =         (0,  7)
     fop_00_03 =         (0,  3)
     fop_04_07 =         (4,  7)
+    fop_08_11 =         (8,  11)
     fop_12_15 =         (12, 15)
     fop_08_08 =         (8,  8)
     fop_04_04 =         (4,  4)
@@ -1790,13 +1816,27 @@ MovMUReg2: MovMUReg2_15 is MovMUReg2_15 {
 :ldc    rm_08_11,sr  is sr & opcode_12_15=0b0100 & rm_08_11 & opcode_00_07=0b00001110 
 {
     sr = rm_08_11 & 0x0FFF0FFF;
+@ifdef SH2E
+    _i:4 = rm_08_11 & 0xF0;   # = sr[4,4]; this form reads as "(Rm & 0xf0) >> 4" in the C
+    imask = _i[4,4];
+@else
+    imask = sr[4,4];
+@endif
 }
 
-:ldc.l  @rm_08_11+,sr  is sr & opcode_12_15=0b0100 & rm_08_11 & opcode_00_07=0b00000111 
+:ldc.l  @rm_08_11+,sr  is sr & opcode_12_15=0b0100 & rm_08_11 & opcode_00_07=0b00000111
 {
+@ifdef SH2E
+    _v:4 = *rm_08_11;
+    sr = _v & 0x0FFF0FFF;
+    _i:4 = _v & 0xF0;
+    imask = _i[4,4];
+@else
     sr = *rm_08_11 & 0x0FFF0FFF;
+    imask = sr[4,4];
+@endif
     rm_08_11 = rm_08_11 + 4;
-    
+
 }
 
 :ldc    rm_08_11,gbr  is gbr & opcode_12_15=0b0100 & rm_08_11 & opcode_00_07=0b00011110 
@@ -1883,14 +1923,28 @@ MovMUReg2: MovMUReg2_15 is MovMUReg2_15 {
     _pc:4 = *r15;
     r15 = r15 + 4;
     
+@ifdef SH2E
+    _v:4 = *r15;
+    _sr:4 = _v & 0x000063F3;
+@else
     _sr:4 = *r15 & 0x000063F3;
+@endif
     r15  = r15 + 4;
-    
-    delayslot(1);
-    
-    pc = _pc;
+
+    # SR is restored before the slot instruction executes (register updates happen in the
+    # order RTE -> slot; SH-2E programming manual 7.2.48), so a T-bit write in the slot wins.
     sr = _sr;
-    
+@ifdef SH2E
+    _i:4 = _v & 0xF0;
+    imask = _i[4,4];
+@else
+    imask = _sr[4,4];
+@endif
+
+    delayslot(1);
+
+    pc = _pc;
+
     return [pc];
 }
 
@@ -1908,13 +1962,13 @@ define pcodeop Sleep_Standby;
 
 :stc    sr,rn_08_11  is sr & opcode_12_15=0b0000 & rn_08_11 & opcode_00_07=0b00000010 
 {
-    rn_08_11 = sr;
+    rn_08_11 = $(SR_VALUE);
 }
 
-:stc.l  sr,@-rn_08_11  is sr & opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00000011 
+:stc.l  sr,@-rn_08_11  is sr & opcode_12_15=0b0100 & rn_08_11 & opcode_00_07=0b00000011
 {
     rn_08_11 = rn_08_11 -4;
-    *rn_08_11 = sr;
+    *rn_08_11 = $(SR_VALUE);
 }
 
 :stc    gbr,rn_08_11  is gbr & opcode_12_15=0b0000 & rn_08_11 & opcode_00_07=0b00010010 
@@ -1995,7 +2049,7 @@ define pcodeop Sleep_Standby;
 :trapa  imm_00_07  is opcode_08_15=0b11000011 & imm_00_07
 {
     r15 = r15 - 4;
-    *r15 = sr;
+    *r15 = $(SR_VALUE);
 
     r15 = r15 - 4;
     dest:4 = inst_next;
@@ -2031,6 +2085,14 @@ define pcodeop Sleep_Standby;
 :fcmp"/eq" ffrm_04_07, ffrn_08_11   is fop_12_15=0b1111 & ffrn_08_11 & ffrm_04_07 & fop_00_03=0b0100
 {
     $(T_FLAG) = (ffrn_08_11 f== ffrm_04_07);
+}
+
+# FCMP/EQ FRn,FRn is the isnan idiom: T=0 for a NaN (qNaN: unordered; sNaN: invalid, T=0 with the
+# V exception disabled; SH-2E programming manual 7.3.3). Spelled as !nan() because the decompiler
+# folds "x f== x" to true (RuleTrivialArith), which deletes the NaN branch.
+:fcmp"/eq" ffrm_04_07, ffrn_08_11   is fop_12_15=0b1111 & ffrn_08_11 & ffrm_04_07 & fop_00_03=0b0100 & fop_04_07=fop_08_11
+{
+    $(T_FLAG) = !nan(ffrn_08_11);
 }
 
 # TODO: FCMP/EQ DRm, DRn          1111nnn0mmm00100 (DRn=DRm)? 1:0 → T
@@ -2227,9 +2289,20 @@ define pcodeop Sleep_Standby;
 # TODO: FSUB DRm, DRn               1111nnn0mmm00001 DRn - DRm → DRn
 
 # FTRC FRm, FPUL              1111mmmm00111101 (long) FRm → FPUL
+# Out-of-range inputs saturate (invalid-operation exception disabled case):
+# +out of range / +INF -> 0x7FFFFFFF; -out of range / -INF / NaN -> 0x80000000.
+# Range checks use float compares (not raw-bit compares, which the decompiler shows as
+# misleading "(int)x" casts).
 :ftrc ffrm_08_11, fpul  is fpul & fop_12_15=0b1111 & ffrm_08_11 & fop_00_07=0b00111101
 {
+    local lim:4 = int2float(0x80000000:8);                      # +2^31
     fpul = trunc(ffrm_08_11);
+    if (!(ffrm_08_11 f>= lim)) goto <ftrc_chkneg>;              # +2^31 and above, +INF
+    fpul = 0x7FFFFFFF;
+    <ftrc_chkneg>
+    if (!((ffrm_08_11 f< f- lim) || nan(ffrm_08_11))) goto <ftrc_done>;  # below -2^31, -INF, NaN
+    fpul = 0x80000000;
+    <ftrc_done>
 }
 
 # FTRC DRm, FPUL              1111mmm000111101 (long) DRm → FPUL

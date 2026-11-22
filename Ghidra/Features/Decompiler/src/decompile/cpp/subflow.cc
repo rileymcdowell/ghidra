@@ -200,7 +200,9 @@ SubvariableFlow::ReplaceOp *SubvariableFlow::createOpDown(OpCode opc,int4 numpar
 ///
 /// We assume the variable flows as a parameter to the CALL. If the CALL doesn't lock the parameter
 /// size, create a PatchRecord within the subgraph that allows the CALL to take the parameter
-/// with its smaller logical size.
+/// with its smaller logical size.  A CALLIND is not trimmed: its target may still resolve to a function
+/// with a locked prototype (ActionDeindirect), and the bits cut off here could not be recovered for
+/// the full-size parameter.
 /// \param op is the given CALL op
 /// \param rvn is the given subgraph variable acting as a parameter
 /// \param slot is the input slot of the variable within the CALL
@@ -209,6 +211,7 @@ bool SubvariableFlow::tryCallPull(PcodeOp *op,ReplaceVarnode *rvn,int4 slot)
 
 {
   if (slot == 0) return false;
+  if (op->code() == CPUI_CALLIND) return false;	// Target (and prototype) may not be known yet
   if (!aggressive) {
     if ((rvn->vn->getConsume()&~rvn->mask)!=0)	// If there's something outside the mask being consumed
       return false;				// Don't truncate

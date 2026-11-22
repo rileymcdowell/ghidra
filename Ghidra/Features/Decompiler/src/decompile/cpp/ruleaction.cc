@@ -2369,7 +2369,16 @@ int4 RuleLessNotEqual::applyOp(PcodeOp *op,Funcdata &data)
 ///   - `V | V  => V`
 ///   - `V ^ V   => #0`
 ///
-/// Handles other signed, boolean, and floating-point variants.
+/// Handles other signed, boolean, and floating-point variants.  A floating-point NaN is unordered
+/// with respect to itself, so only `V f< V` is a constant.  The other floating-point forms become NaN tests:
+///   - `V f== V  =>  !NAN(V)`
+///   - `V f<= V  =>  !NAN(V)`
+///   - `V f!= V  =>  NAN(V)`
+///
+/// Boolean operations on complementary inputs are also simplified, which cleans up after the NaN tests:
+///   - `V || !V  =>  true`
+///   - `V ^^ !V  =>  true`
+///   - `V && !V  =>  false`
 void RuleTrivialArith::getOpList(vector<uint4> &oplist) const
 
 {
@@ -2389,6 +2398,15 @@ int4 RuleTrivialArith::applyOp(PcodeOp *op,Funcdata &data)
   if (op->numInput() != 2) return 0;
   in0 = op->getIn(0);
   in1 = op->getIn(1);
+  OpCode opc = op->code();
+  if ((opc == CPUI_BOOL_OR || opc == CPUI_BOOL_AND || opc == CPUI_BOOL_XOR) && !in0->isFree() && !in1->isFree()) {
+    if (BooleanMatch::evaluate(in0,in1,0) == BooleanMatch::complementary) {	// V || !V
+      data.opRemoveInput(op,1);
+      data.opSetOpcode(op,CPUI_COPY);
+      data.opSetInput(op,data.newConstant(1,(opc == CPUI_BOOL_AND) ? 0 : 1),0);
+      return 1;
+    }
+  }
   if (in0 != in1) {		// Inputs must be identical
     if (!in0->isWritten()) return 0;
     if (!in1->isWritten()) return 0;
@@ -2400,17 +2418,31 @@ int4 RuleTrivialArith::applyOp(PcodeOp *op,Funcdata &data)
   case CPUI_INT_SLESS:
   case CPUI_INT_LESS:
   case CPUI_BOOL_XOR:
-  case CPUI_FLOAT_NOTEQUAL:
-  case CPUI_FLOAT_LESS:
+  case CPUI_FLOAT_LESS:		// false, even for a NaN
     vn = data.newConstant(1,0);
     break;
   case CPUI_INT_EQUAL:		// Boolean 1
   case CPUI_INT_SLESSEQUAL:
   case CPUI_INT_LESSEQUAL:
-  case CPUI_FLOAT_EQUAL:
-  case CPUI_FLOAT_LESSEQUAL:
     vn = data.newConstant(1,1);
     break;
+  case CPUI_FLOAT_NOTEQUAL:	// true only for a NaN:  V f!= V  =>  NAN(V)
+    data.opRemoveInput(op,1);
+    data.opSetOpcode(op,CPUI_FLOAT_NAN);
+    return 1;
+  case CPUI_FLOAT_EQUAL:	// false only for a NaN:  V f== V  =>  !NAN(V)
+  case CPUI_FLOAT_LESSEQUAL:
+  {
+    PcodeOp *nanop = data.newOp(1,op->getAddr());
+    data.opSetOpcode(nanop,CPUI_FLOAT_NAN);
+    Varnode *nanvn = data.newUniqueOut(1,nanop);
+    data.opSetInput(nanop,in0,0);
+    data.opInsertBefore(nanop,op);
+    data.opRemoveInput(op,1);
+    data.opSetOpcode(op,CPUI_BOOL_NEGATE);
+    data.opSetInput(op,nanvn,0);
+    return 1;
+  }
   case CPUI_INT_XOR:		// Same size 0
     //  case CPUI_INT_SUB:
     vn = data.newConstant(op->getOut()->getSize(),0);
@@ -3936,6 +3968,16 @@ int4 RulePropagateCopy::applyOp(PcodeOp *op,Funcdata &data)
     if (otherOp->isReturnCopy()) continue;
     for(int4 slot=0;slot<otherOp->numInput();++slot) {
       if (vn != otherOp->getIn(slot)) continue;
+      if (otherOp->code() == CPUI_SUBPIECE && vn->isAddrTied()) {
+	Varnode *outvn = otherOp->getOut();
+	if (outvn->isAddrTied() && outvn->overlap(*vn) >= 0)
+	  continue;	// Keep the truncation of an address tied value reading its own storage
+      }
+      if (otherOp->code() == CPUI_COPY && vn->isPersist()) {
+	Varnode *outvn = otherOp->getOut();
+	if (outvn->getAddr() == vn->getAddr() && outvn->getSize() == vn->getSize() && invn->getAddr() != vn->getAddr())
+	  continue;	// Keep a global's copy of itself, so it does not print as a second store
+      }
       if (otherOp->isMarker()) {
 	if (invn->isConstant()) continue;		// Don't propagate constants into markers
 	if (vn->isAddrForce()) continue;		// Don't propagate if we are keeping the COPY anyway

@@ -1,0 +1,103 @@
+<decompilertest>
+<binaryimage arch="SuperH:BE:32:SH-2E:default">
+<!--
+  A value built in a register on several paths and stored to a global once.  The register must not be
+  merged with the global when one of its writes is overwritten (or repeated) before the store, or the C
+  shows stores to the global that the code never makes.
+  presetflag: the delay slot of bt/s presets r2 = 3, the fall-through path overwrites it.
+     mov.l @(0x1014,pc),r5; mov.b @(1,r5),r0; mov #4,r6; cmp/hs r6,r0; bt/s 0x1010; mov #3,r2
+     mov.l @(0x1018,pc),r6; mov.b @r6,r2; rts; mov.b r2,@r5; .long 0x3000; .long 0x3010
+  orflag: r0 = 0 in the delay slot of bf/s, then r0 = 1 at the target of the other branches.
+     mov.l @(0x1038,pc),r5; mov.b @(5,r5),r0; cmp/eq #2,r0; bt 0x1030; mov.b @(6,r5),r0; cmp/eq #2,r0
+     bf/s 0x1032; mov #0,r0; mov #1,r0; rts; mov.b r0,@(4,r5); nop; .long 0x3020
+  selectflag: one write per path, so the merge stays (if/else of two stores).
+     mov.l @(0x1054,pc),r5; mov.b @(1,r5),r0; cmp/eq #1,r0; bf 0x104e; mov #7,r2; bra 0x1050; nop
+     mov #9,r2; rts; mov.b r2,@r5; .long 0x3040
+  loopsum: r2 accumulates in a loop and is stored after it.
+     mov.l @(0x1074,pc),r5; mov #0,r2; mov #10,r3; dt r3; bf/s 0x1066; add r4,r2; rts; mov.l r2,@r5
+     nop; nop; .long 0x3060
+  The next two store the value just before a call, so the store's COPY is folded into the call's
+  INDIRECT for the global and the INDIRECT's forced merge must not print the register's writes either.
+  callflag: r0 = 0 in the delay slot of bf/s, r0 = 2 on the fall-through, one store, then a call.
+     sts.l pr,@-r15; mov.l @(0x201c,pc),r5; mov.b @(1,r5),r0; cmp/eq #1,r0; bf/s 0x200e; mov #0,r0
+     mov #2,r0; mov.b r0,@r5; mov.l @(0x2020,pc),r2; jsr @r2; nop; lds.l @r15+,pr; rts; nop
+     .long 0x3080; .long 0x2040   (0x2040: rts; nop)
+  loopcall: r6 counts in a loop, is stored once after it, then a call.
+     sts.l pr,@-r15; mov.l @(0x207c,pc),r5; mov #0,r6; mov #10,r3; dt r3; bf/s 0x2068; add #1,r6
+     mov.w r6,@r5; mov.l @(0x2080,pc),r2; jsr @r2; nop; lds.l @r15+,pr; rts; nop
+     .long 0x30a0; .long 0x2040
+  loadclamp: r6 = 3, or the global's own value, clamped to 6 and stored back once. The MULTIEQUAL
+  joins the global with the constant, so merging it with the global would print the constant and
+  the clamp as stores.
+     mov.l @(0x20bc,pc),r5; mov.b @(1,r5),r0; cmp/eq #1,r0; bf 0x20ac; bra 0x20ae; mov #3,r6
+     mov.b @r5,r6; extu.b r6,r2; mov #6,r3; cmp/gt r3,r2; bf 0x20b8; mov #6,r6; rts; mov.b r6,@r5
+     .long 0x30c0
+-->
+<bytechunk space="ram" offset="0x1000" readonly="true">
+d5048451e60430628d02e203d6026260
+000b2520000030000000301000090009
+d505845588028903845688028f01e000
+e001000b805400090000302000090009
+d504845188018b02e207a0010009e209
+000b2520000030400009000900090009
+d504e200e30a43108ffd324c000b2522
+0009000900003060
+</bytechunk>
+<bytechunk space="ram" offset="0x2000" readonly="true">
+4f22d506845188018f01e000e0022500
+d203420b00094f26000b000900003080
+00002040000900090009000900090009
+00090009000900090009000900090009
+000b0009000900090009000900090009
+00090009000900090009000900090009
+4f22d506e600e30a43108ffd76012561
+d203420b00094f26000b0009000030a0
+00002040000900090009000900090009
+00090009000900090009000900090009
+d506845188018b01a001e6036650626c
+e30632378b00e606000b2560000030c0
+</bytechunk>
+<symbol space="ram" offset="0x1000" name="presetflag"/>
+<symbol space="ram" offset="0x1020" name="orflag"/>
+<symbol space="ram" offset="0x1040" name="selectflag"/>
+<symbol space="ram" offset="0x1060" name="loopsum"/>
+<symbol space="ram" offset="0x2000" name="callflag"/>
+<symbol space="ram" offset="0x2040" name="callee"/>
+<symbol space="ram" offset="0x2060" name="loopcall"/>
+<symbol space="ram" offset="0x20a0" name="loadclamp"/>
+</binaryimage>
+<script>
+  <com>option readonly on</com>
+  <com>lo fu presetflag</com>
+  <com>dec</com>
+  <com>print C</com>
+  <com>lo fu orflag</com>
+  <com>dec</com>
+  <com>print C</com>
+  <com>lo fu selectflag</com>
+  <com>dec</com>
+  <com>print C</com>
+  <com>lo fu loopsum</com>
+  <com>dec</com>
+  <com>print C</com>
+  <com>lo fu callflag</com>
+  <com>dec</com>
+  <com>print C</com>
+  <com>lo fu loopcall</com>
+  <com>dec</com>
+  <com>print C</com>
+  <com>lo fu loadclamp</com>
+  <com>dec</com>
+  <com>print C</com>
+  <com>quit</com>
+</script>
+<stringmatch name="Global copy merge #1" min="1" max="1">Ram00003000 = </stringmatch>
+<stringmatch name="Global copy merge #2" min="0" max="0">Ram00003000 = 3;</stringmatch>
+<stringmatch name="Global copy merge #3" min="1" max="1">Ram00003024 = </stringmatch>
+<stringmatch name="Global copy merge #4" min="1" max="1">Ram00003040 = 7;</stringmatch>
+<stringmatch name="Global copy merge #5" min="1" max="1">Ram00003040 = 9;</stringmatch>
+<stringmatch name="Global copy merge #6" min="1" max="1">Ram00003060 = </stringmatch>
+<stringmatch name="Global copy merge #7" min="1" max="1">Ram00003080 = </stringmatch>
+<stringmatch name="Global copy merge #8" min="1" max="1">Ram000030a0 = </stringmatch>
+<stringmatch name="Global copy merge #9" min="1" max="1">Ram000030c0 = </stringmatch>
+</decompilertest>

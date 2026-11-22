@@ -263,6 +263,249 @@ bool Merge::mergeTestBasic(Varnode *vn)
   return true;
 }
 
+/// \brief Test if a write to a variable reaches a given COPY into a global before anything else
+///
+/// Follow every path from the given defining op until it reaches a COPY from \b high_in into
+/// \b high_out.  The test fails if a path first reaches another write to \b high_in, the defining
+/// op itself again (a loop), another write to \b high_out, or the end of the function.
+/// MULTIEQUAL and INDIRECT outputs do not count as writes.
+/// \param defOp is the op writing an instance of \b high_in
+/// \param high_in is the variable copied to the global
+/// \param high_out is the global variable
+/// \return \b true if every path from \b defOp reaches the COPY first
+bool Merge::writeReachesCopy(PcodeOp *defOp,HighVariable *high_in,HighVariable *high_out)
+
+{
+  vector<FlowBlock *> visited;
+  vector<FlowBlock *> stack;
+  BlockBasic *bl = defOp->getParent();
+  list<PcodeOp *>::iterator iter = defOp->getBasicIter();
+  ++iter;
+  bool res = true;
+  for(;;) {
+    bool reached = false;
+    for(;iter!=bl->endOp();++iter) {
+      PcodeOp *op = *iter;
+      if (op == defOp) {
+	res = false;
+	break;
+      }
+      Varnode *outvn = op->getOut();
+      if (outvn == (Varnode *)0) continue;
+      HighVariable *high = outvn->getHigh();
+      if (high != high_in && high != high_out) continue;
+      if (op->code() == CPUI_MULTIEQUAL || op->code() == CPUI_INDIRECT) continue;
+      if (high == high_out && op->code() == CPUI_COPY && op->getIn(0)->getHigh() == high_in) {
+	reached = true;
+	break;
+      }
+      res = false;
+      break;
+    }
+    if (!res) break;
+    if (!reached) {
+      if (bl->sizeOut() == 0) {
+	res = false;
+	break;
+      }
+      for(int4 i=0;i<bl->sizeOut();++i) {
+	FlowBlock *succ = bl->getOut(i);
+	if (succ->isMark()) continue;
+	succ->setMark();
+	visited.push_back(succ);
+	stack.push_back(succ);
+      }
+    }
+    if (stack.empty()) break;
+    bl = (BlockBasic *)stack.back();
+    stack.pop_back();
+    iter = bl->beginOp();
+  }
+  for(int4 i=0;i<visited.size();++i)
+    visited[i]->clearMark();
+  return res;
+}
+
+/// \brief Test if merging the input and output of a COPY adds stores to a global variable
+///
+/// If one side of the COPY is a global (persistent) variable and the other is not address tied,
+/// every write to the other variable prints as a store to the global after the merge: for a store
+/// (the output is the global) the input's writes, for a load (the input is the global) the output
+/// variable's other writes.  If one of those writes is overwritten before it reaches a COPY into the
+/// global (a flag preset in a branch delay slot and changed on the other path), or the write is in a
+/// loop that the COPY is not, the C would store values to the global that the code never stores.
+/// \param op is the op whose output and input are being merged
+/// \param high_out is the variable holding the output of the op
+/// \param high_in is the variable holding the input of the op
+/// \return \b false if the merge would print stores to the global that the code does not make
+bool Merge::mergeTestGlobalCopy(PcodeOp *op,HighVariable *high_out,HighVariable *high_in)
+
+{
+  if (op->code() != CPUI_COPY) return true;
+  if (high_in == high_out) return true;
+  HighVariable *glob,*other;
+  if (high_out->isPersist() && !high_in->isPersist() && !high_in->isAddrTied()) {
+    glob = high_out;		// A store: the input's writes would print as stores
+    other = high_in;
+  }
+  else if (high_in->isPersist() && !high_out->isPersist() && !high_out->isAddrTied()) {
+    glob = high_in;		// A load: the output variable's other writes would print as stores
+    other = high_out;
+  }
+  else
+    return true;
+  for(int4 i=0;i<other->numInstances();++i) {
+    Varnode *vn = other->getInstance(i);
+    if (!vn->isWritten()) continue;
+    PcodeOp *def = vn->getDef();
+    if (def->code() == CPUI_MULTIEQUAL || def->code() == CPUI_INDIRECT) continue;
+    if (def->code() == CPUI_COPY && def->getIn(0)->getHigh() == glob) continue;	// A load of the global
+    if (!writeReachesCopy(def,other,glob)) return false;
+  }
+  return true;
+}
+
+/// \brief Test if a write to a value flowing into a global's MULTIEQUAL or INDIRECT reaches it first
+///
+/// This is the test of writeReachesCopy(), for a value that is still spread over several Varnodes
+/// (before MULTIEQUAL merging).  Those Varnodes are \e marked.  Every path from the defining op must
+/// reach the given INDIRECT, or the end of the given block (the incoming edge of a MULTIEQUAL), or a
+/// COPY, INDIRECT or MULTIEQUAL (on the edge followed) taking a marked Varnode into the global, before
+/// any other write of a marked Varnode, the defining op again, another write to the global, or the end
+/// of the function.
+/// \param defOp is the op writing one of the marked Varnodes
+/// \param targetOp is the INDIRECT reading the value (or null)
+/// \param targetBlock is the block whose end feeds the MULTIEQUAL reading the value (or null)
+/// \param high_out is the global variable
+/// \return \b true if every path from \b defOp reaches the global first
+bool Merge::markerWriteReaches(PcodeOp *defOp,PcodeOp *targetOp,FlowBlock *targetBlock,HighVariable *high_out)
+
+{
+  set<pair<int4,int4> > seen;			// Edges already followed
+  vector<pair<FlowBlock *,int4> > stack;	// Block to scan and the slot of the edge it is entered by
+  BlockBasic *bl = defOp->getParent();
+  list<PcodeOp *>::iterator iter = defOp->getBasicIter();
+  ++iter;
+  int4 inSlot = -1;
+  for(;;) {
+    bool reached = false;
+    for(;iter!=bl->endOp();++iter) {
+      PcodeOp *op = *iter;
+      if (op == targetOp) {
+	reached = true;
+	break;
+      }
+      if (op == defOp) return false;
+      if (op->isMarker()) {
+	if (op->getOut()->getHigh() == high_out) {	// The value flows into the global here
+	  Varnode *invn = (op->code() == CPUI_INDIRECT) ? op->getIn(0) :
+	      ((inSlot >= 0) ? op->getIn(inSlot) : (Varnode *)0);
+	  if (invn != (Varnode *)0 && invn->isMark()) {
+	    reached = true;
+	    break;
+	  }
+	}
+	continue;
+      }
+      Varnode *outvn = op->getOut();
+      if (outvn == (Varnode *)0) continue;
+      if (outvn->isMark()) return false;
+      if (outvn->getHigh() == high_out) {
+	if (op->code() == CPUI_COPY && op->getIn(0)->isMark()) {
+	  reached = true;
+	  break;
+	}
+	return false;
+      }
+    }
+    if (!reached && bl != targetBlock) {
+      if (bl->sizeOut() == 0) return false;
+      for(int4 i=0;i<bl->sizeOut();++i) {
+	FlowBlock *succ = bl->getOut(i);
+	if (!seen.insert(pair<int4,int4>(bl->getIndex(),succ->getIndex())).second) continue;
+	stack.push_back(pair<FlowBlock *,int4>(succ,bl->getOutRevIndex(i)));
+      }
+    }
+    if (stack.empty()) return true;
+    bl = (BlockBasic *)stack.back().first;
+    inSlot = stack.back().second;
+    stack.pop_back();
+    iter = bl->beginOp();
+  }
+}
+
+/// \brief Test if force-merging an input of a MULTIEQUAL or INDIRECT with its output adds stores to a global
+///
+/// When the output of the op is a global (persistent) variable and the input is a value that is not
+/// address tied (a register, say, that the stored value was propagated from), the forced merge prints
+/// every write to that value as a store to the global.  Each write must reach the op (or for a
+/// MULTIEQUAL, the end of the incoming block) on every path without being overwritten or repeated.
+/// When the input is a global and the output of a MULTIEQUAL is not, the merge makes the MULTIEQUAL the
+/// global, so the writes of its other inputs must reach a COPY into the global.  A value of a different
+/// global among the joined values always fails, as it would be copied in and print as a store.
+/// \param op is the MULTIEQUAL or INDIRECT
+/// \param slot is the input slot
+/// \return \b false if the input should be trimmed with a COPY instead of merged with the global
+bool Merge::mergeTestGlobalMarker(PcodeOp *op,int4 slot)
+
+{
+  HighVariable *high_out = op->getOut()->getHigh();
+  Varnode *invn;
+  PcodeOp *targetOp = (PcodeOp *)0;
+  FlowBlock *targetBlock = (FlowBlock *)0;
+  if (high_out->isPersist()) {
+    invn = op->getIn(slot);		// A value flowing into the global's MULTIEQUAL or INDIRECT
+    if (invn->isAddrTied() || invn->isPersist() || invn->isConstant() || invn->isInput()) return true;
+    if (op->code() == CPUI_INDIRECT)
+      targetOp = op;
+    else
+      targetBlock = op->getParent()->getIn(slot);
+  }
+  else {
+    // A global flowing into a MULTIEQUAL of other values: merging makes the MULTIEQUAL the global,
+    // so the writes of the other values must reach a COPY into the global
+    if (op->code() != CPUI_MULTIEQUAL || op->getOut()->isAddrTied()) return true;
+    high_out = op->getIn(slot)->getHigh();
+    if (!high_out->isPersist()) return true;
+    invn = op->getOut();
+  }
+  vector<Varnode *> vnlist;
+  vnlist.push_back(invn);
+  invn->setMark();
+  bool res = true;
+  for(int4 i=0;i<vnlist.size();++i) {		// Collect the Varnodes joined by MULTIEQUALs and INDIRECTs
+    Varnode *vn = vnlist[i];
+    if (!vn->isWritten()) continue;
+    PcodeOp *def = vn->getDef();
+    if (def->code() != CPUI_MULTIEQUAL && def->code() != CPUI_INDIRECT) continue;
+    int4 max = (def->code() == CPUI_INDIRECT) ? 1 : def->numInput();
+    for(int4 j=0;j<max;++j) {
+      Varnode *vn2 = def->getIn(j);
+      if (vn2->isMark() || vn2->isConstant()) continue;
+      if (vn2->isAddrTied() || vn2->isPersist()) {
+	if (vn2->getHigh() != high_out && vn2->getHigh()->isPersist())
+	  res = false;		// Another global's value: it would be copied in and print as a store
+	continue;
+      }
+      vn2->setMark();
+      vnlist.push_back(vn2);
+    }
+  }
+  for(int4 i=0;res && i<vnlist.size();++i) {
+    Varnode *vn = vnlist[i];
+    if (!vn->isWritten()) continue;
+    PcodeOp *def = vn->getDef();
+    if (def->code() == CPUI_MULTIEQUAL || def->code() == CPUI_INDIRECT) continue;
+    if (!markerWriteReaches(def,targetOp,targetBlock,high_out)) {
+      res = false;
+      break;
+    }
+  }
+  for(int4 i=0;i<vnlist.size();++i)
+    vnlist[i]->clearMark();
+  return res;
+}
+
 /// \brief Speculatively merge all HighVariables in the given list as well as possible
 ///
 /// The variables are first sorted by the index of the earliest block in their range.
@@ -342,7 +585,8 @@ void Merge::mergeOpcode(OpCode opc)
       for(int4 j=0;j<op->numInput();++j) {
 	vn2 = op->getIn(j);
 	if (!mergeTestBasic(vn2)) continue;
-	if (mergeTestRequired(vn1->getHigh(),vn2->getHigh()))
+	if (mergeTestRequired(vn1->getHigh(),vn2->getHigh()) &&
+	    mergeTestGlobalCopy(op,vn1->getHigh(),vn2->getHigh()))
 	  merge(vn1->getHigh(),vn2->getHigh(),false);	// This is a required merge
       }
     }
@@ -729,7 +973,7 @@ void Merge::mergeOp(PcodeOp *op)
 				// restrictions
   for(i=0;i<max;++i) {
     HighVariable *high_in = op->getIn(i)->getHigh();
-    if (!mergeTestRequired(high_out,high_in)) {
+    if (!mergeTestRequired(high_out,high_in) || !mergeTestGlobalMarker(op,i)) {
       trimOpInput(op,i);
       continue;
     }
@@ -853,13 +1097,14 @@ void Merge::mergeIndirect(PcodeOp *indop)
   }
 
   Varnode *invn0 = indop->getIn(0);
-  if (mergeTestRequired(outvn->getHigh(),invn0->getHigh())) {
+  bool storeTest = mergeTestGlobalMarker(indop,0);
+  if (storeTest && mergeTestRequired(outvn->getHigh(),invn0->getHigh())) {
     if (merge(invn0->getHigh(),outvn->getHigh(),false))
       return;
   }
   // If we cannot merge, the only thing that can go wrong with an input trim, is if the output of
   // indop is involved in the input to the op causing the indirect effect. So test for this.
-  if (snipOutputInterference(indop)) {
+  if (storeTest && snipOutputInterference(indop)) {
     // If we found (and snipped) something related to the output, try merging again before snipping the INDIRECT
     if (mergeTestRequired(outvn->getHigh(), invn0->getHigh())) {
       if (merge(invn0->getHigh(),outvn->getHigh(),false))
@@ -1005,6 +1250,7 @@ void Merge::mergeAdjacent(void)
       if ((vn2->getDef()==(PcodeOp *)0)&&(!vn2->isInput())) continue;
       high_in = vn2->getHigh();
       if (!mergeTestAdjacent(high_out,high_in)) continue;
+      if (!mergeTestGlobalCopy(op,high_out,high_in)) continue;
 
       if (!testCache.intersection(high_in,high_out)) // If no interval intersection
 	merge(high_out,high_in,true);

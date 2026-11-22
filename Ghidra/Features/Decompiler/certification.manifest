@@ -37,11 +37,13 @@ src/decompile/datatests/enum.xml||GHIDRA||||END|
 src/decompile/datatests/floatcast.xml||GHIDRA||||END|
 src/decompile/datatests/floatconv.xml||GHIDRA||||END|
 src/decompile/datatests/floatprint.xml||GHIDRA||||END|
+src/decompile/datatests/floatselfcompare.xml||GHIDRA||||END|
 src/decompile/datatests/forloop1.xml||GHIDRA||||END|
 src/decompile/datatests/forloop_loaditer.xml||GHIDRA||||END|
 src/decompile/datatests/forloop_thruspecial.xml||GHIDRA||||END|
 src/decompile/datatests/forloop_varused.xml||GHIDRA||||END|
 src/decompile/datatests/forloop_withskip.xml||GHIDRA||||END|
+src/decompile/datatests/globalcopymerge.xml||GHIDRA||||END|
 src/decompile/datatests/gp.xml||GHIDRA||||END|
 src/decompile/datatests/heapstring.xml||GHIDRA||||END|
 src/decompile/datatests/ifnoexit.xml||GHIDRA||||END|
@@ -52,6 +54,7 @@ src/decompile/datatests/injectoverride.xml||GHIDRA||||END|
 src/decompile/datatests/inline.xml||GHIDRA||||END|
 src/decompile/datatests/inlinetarget.xml||GHIDRA||||END|
 src/decompile/datatests/laneleft.xml||GHIDRA||||END|
+src/decompile/datatests/lockedcallind.xml||GHIDRA||||END|
 src/decompile/datatests/longdouble.xml||GHIDRA||||END|
 src/decompile/datatests/loopcomment.xml||GHIDRA||||END|
 src/decompile/datatests/lzcount.xml||GHIDRA||||END|
@@ -72,6 +75,7 @@ src/decompile/datatests/overridedest.xml||GHIDRA||||END|
 src/decompile/datatests/packstructaccess.xml||GHIDRA||||END|
 src/decompile/datatests/partialmerge.xml||GHIDRA||||END|
 src/decompile/datatests/partialsplit.xml||GHIDRA||||END|
+src/decompile/datatests/partialstore.xml||GHIDRA||||END|
 src/decompile/datatests/partialunion.xml||GHIDRA||||END|
 src/decompile/datatests/piecestruct.xml||GHIDRA||||END|
 src/decompile/datatests/pointercmp.xml||GHIDRA||||END|

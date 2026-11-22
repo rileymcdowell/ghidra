@@ -34,6 +34,17 @@
     </data_organization>
     <global>
         <range space="ram"/>
+        <!-- Control registers whose writes must survive dead-code removal (ldc to SR/VBR,
+             lds to FPSCR). imask mirrors SR.I3-I0; see superh.sinc. A global write is still
+             dropped when nothing (no call, no return) can see it, e.g. one overwritten before
+             any read; sh7058.pspec therefore also makes imask volatile. fpscr: in the
+             superh.sinc p-code only sts reads it (no FPU instruction does), so a global fpscr
+             adds just the lds writes (the FPSCR set-up before the first call in the start-up
+             code, the restore in interrupt handlers). Don't add gbr or sr here: gbr-relative addresses are folded into
+             constants, and a global sr turns every T-bit update into a global write. -->
+        <register name="imask"/>
+        <register name="vbr"/>
+        <register name="fpscr"/>
     </global>
     <stackpointer register="r15" space="ram"/>
     <default_proto>
@@ -130,4 +141,181 @@
             </killedbycall>
         </prototype>
     </default_proto>
+    <!-- __preserve_r4_r7 and __shc_runtime are for callees that provably leave r4-r7 alone, such
+         as compiler runtime helpers (shifts, division) whose callers rely on that. Ghidra has no
+         "preserved but may be an argument" effect: a register listed as <unaffected> is marked
+         unaffected on function entry and is then never taken as a parameter (Decompiler
+         funcdata_varnode.cc setInputVarnode / AncestorRealistic::enterNode), so these models
+         leave r4-r7 out of both lists ("unknown effect"), which the decompiler treats as passing
+         through the call. They are never defaults: ghidra_scripts/SH7058_RawImageSetup.java
+         assigns them per function from a register-write analysis of the code. -->
+    <!-- Same as the default, but r4-r7 survive the call. -->
+    <prototype name="__preserve_r4_r7" extrapop="0" stackshift="0">
+        <input>
+            <pentry minsize="4" maxsize="4" metatype="float">
+              <register name="fr4"/>
+            </pentry>
+            <pentry minsize="4" maxsize="4" metatype="float">
+              <register name="fr5"/>
+            </pentry>
+            <pentry minsize="4" maxsize="4" metatype="float">
+              <register name="fr6"/>
+            </pentry>
+            <pentry minsize="4" maxsize="4" metatype="float">
+              <register name="fr7"/>
+            </pentry>
+            <pentry minsize="4" maxsize="4" metatype="float">
+              <register name="fr8"/>
+            </pentry>
+            <pentry minsize="4" maxsize="4" metatype="float">
+              <register name="fr9"/>
+            </pentry>
+            <pentry minsize="4" maxsize="4" metatype="float">
+              <register name="fr10"/>
+            </pentry>
+            <pentry minsize="4" maxsize="4" metatype="float">
+              <register name="fr11"/>
+            </pentry>
+            <pentry minsize="1" maxsize="4" extension="inttype">
+              <register name="r4"/>
+            </pentry>
+            <pentry minsize="1" maxsize="4" extension="inttype">
+              <register name="r5"/>
+            </pentry>
+            <pentry minsize="1" maxsize="4" extension="inttype">
+              <register name="r6"/>
+            </pentry>
+            <pentry minsize="1" maxsize="4" extension="inttype">
+              <register name="r7"/>
+            </pentry>
+            <pentry minsize="1" maxsize="500" align="4">
+              <addr offset="0" space="stack"/>
+            </pentry>
+        </input>
+        <output killedbycall="true">  <!-- so fr0, r0 and r1 are killed by a call too -->
+            <pentry minsize="4" maxsize="4" metatype="float">
+              <register name="fr0"/>
+            </pentry>
+            <pentry minsize="1" maxsize="4" extension="inttype">
+              <register name="r0"/>
+            </pentry>
+            <pentry minsize="5" maxsize="8">
+              <addr space="join" piece1="r1" piece2="r0"/>
+            </pentry>
+        </output>
+        <unaffected>
+            <register name="r8"/>
+            <register name="r9"/>
+            <register name="r10"/>
+            <register name="r11"/>
+            <register name="r12"/>
+            <register name="r13"/>
+            <register name="r14"/>
+            <register name="r15"/>
+            <register name="gbr"/>
+            <register name="fr12"/>
+            <register name="fr13"/>
+            <register name="fr14"/>
+            <register name="fr15"/>
+            <register name="mach"/>
+            <register name="macl"/>
+        </unaffected>
+        <killedbycall>
+            <register name="r2"/>
+            <register name="r3"/>
+            <register name="fr1"/>
+            <register name="fr2"/>
+            <register name="fr3"/>
+            <register name="fr4"/>
+            <register name="fr5"/>
+            <register name="fr6"/>
+            <register name="fr7"/>
+            <register name="fr8"/>
+            <register name="fr9"/>
+            <register name="fr10"/>
+            <register name="fr11"/>
+            <register name="fpul"/>
+            <register name="sr"/>
+        </killedbycall>
+    </prototype>
+    <!-- SHC runtime / hand-written library helpers (division, shifts, table lookups):
+         arguments in fr0-fr3 and r0-r3, result in fr0 / r0, r4-r7 survive the call.
+         Assigned per function when the routine takes inputs only in r0-r3/fr0-fr3 and provably
+         leaves r4-r7 alone. -->
+    <prototype name="__shc_runtime" extrapop="0" stackshift="0">
+        <input>
+            <pentry minsize="4" maxsize="4" metatype="float">
+              <register name="fr0"/>
+            </pentry>
+            <pentry minsize="4" maxsize="4" metatype="float">
+              <register name="fr1"/>
+            </pentry>
+            <pentry minsize="4" maxsize="4" metatype="float">
+              <register name="fr2"/>
+            </pentry>
+            <pentry minsize="4" maxsize="4" metatype="float">
+              <register name="fr3"/>
+            </pentry>
+            <pentry minsize="1" maxsize="4" extension="inttype">
+              <register name="r0"/>
+            </pentry>
+            <pentry minsize="1" maxsize="4" extension="inttype">
+              <register name="r1"/>
+            </pentry>
+            <pentry minsize="1" maxsize="4" extension="inttype">
+              <register name="r2"/>
+            </pentry>
+            <pentry minsize="1" maxsize="4" extension="inttype">
+              <register name="r3"/>
+            </pentry>
+            <pentry minsize="1" maxsize="500" align="4">
+              <addr offset="0" space="stack"/>
+            </pentry>
+        </input>
+        <output killedbycall="true">  <!-- so fr0, r0 and r1 are killed by a call too -->
+            <pentry minsize="4" maxsize="4" metatype="float">
+              <register name="fr0"/>
+            </pentry>
+            <pentry minsize="1" maxsize="4" extension="inttype">
+              <register name="r0"/>
+            </pentry>
+            <pentry minsize="5" maxsize="8">
+              <addr space="join" piece1="r1" piece2="r0"/>
+            </pentry>
+        </output>
+        <unaffected>
+            <register name="r8"/>
+            <register name="r9"/>
+            <register name="r10"/>
+            <register name="r11"/>
+            <register name="r12"/>
+            <register name="r13"/>
+            <register name="r14"/>
+            <register name="r15"/>
+            <register name="gbr"/>
+            <register name="fr12"/>
+            <register name="fr13"/>
+            <register name="fr14"/>
+            <register name="fr15"/>
+            <register name="mach"/>
+            <register name="macl"/>
+        </unaffected>
+        <killedbycall>
+            <register name="r2"/>
+            <register name="r3"/>
+            <register name="fr1"/>
+            <register name="fr2"/>
+            <register name="fr3"/>
+            <register name="fr4"/>
+            <register name="fr5"/>
+            <register name="fr6"/>
+            <register name="fr7"/>
+            <register name="fr8"/>
+            <register name="fr9"/>
+            <register name="fr10"/>
+            <register name="fr11"/>
+            <register name="fpul"/>
+            <register name="sr"/>
+        </killedbycall>
+    </prototype>
 </compiler_spec>

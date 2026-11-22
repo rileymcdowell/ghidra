@@ -1,0 +1,29 @@
+<decompilertest>
+<binaryimage arch="SuperH:BE:32:SH-2E:default">
+<!--
+  A 2-byte store followed by a 1-byte load of the same address (big endian, the
+  load reads the high byte).  The load must not be printed as a store to the byte,
+  and the 2-byte global must not be saved and restored around it.
+     sts.l pr,@-r15; mov.l @(0x1018,pc),r3; jsr @r3; mov #5,r4; mov.l @(0x101c,pc),r1
+     mov.w r0,@r1; mov.b @r1,r3; mov.l @(0x1020,pc),r2; lds.l @r15+,pr; rts; mov.b r3,@r2
+     nop; .long 0x4000; .long 0x3000; .long 0x3010
+-->
+<bytechunk space="ram" offset="0x1000" readonly="true">
+4f22d305430be405d10421016310d204
+4f26000b223000090000400000003000
+00003010
+</bytechunk>
+<symbol space="ram" offset="0x1000" name="storewide_readbyte"/>
+</binaryimage>
+<script>
+  <com>option readonly on</com>
+  <com>lo fu storewide_readbyte</com>
+  <com>decompile</com>
+  <com>print C</com>
+  <com>quit</com>
+</script>
+<stringmatch name="Partial store #1" min="1" max="1">xRam00003000 = \(\*\(code \*\)0x4000\)\(5\);</stringmatch>
+<stringmatch name="Partial store #2" min="1" max="1">xRam00003010 = xRam00003000\._0_1_;</stringmatch>
+<stringmatch name="Partial store #3" min="0" max="0">xRam00003000\._0_1_ = </stringmatch>
+<stringmatch name="Partial store #4" min="0" max="0">xRam00003000 = xVar</stringmatch>
+</decompilertest>

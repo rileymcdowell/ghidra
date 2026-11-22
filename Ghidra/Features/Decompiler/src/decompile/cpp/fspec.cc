@@ -4936,7 +4936,9 @@ Varnode *FuncCallSpecs::getSpacebaseRelative(void) const
 /// If the Varnode holding the parameter directly as input to the CALL is available,
 /// it must be provided to this method.  If it is not available, this assumes an
 /// (indirect) stack Varnode is needed and builds one. If the holding Varnode is the
-/// correct size it is returned, otherwise a truncated Varnode is constructed.
+/// correct size it is returned. If it is bigger, a truncated Varnode is constructed. If it is
+/// smaller (an earlier transform trimmed an unlocked parameter to the bytes actually used), it is
+/// zero-extended to the size of the parameter.
 /// \param data is the calling function
 /// \param vn is the Varnode holding the parameter (or NULL for a stack parameter)
 /// \param param is the actual parameter description
@@ -4953,16 +4955,42 @@ Varnode *FuncCallSpecs::buildParam(Funcdata &data,Varnode *vn,ProtoParameter *pa
     return vn;
   }
   if (vn->getSize() == param->getSize()) return vn;
-  PcodeOp *newop = data.newOp(2,op->getAddr());
-  data.opSetOpcode(newop,CPUI_SUBPIECE);
+  bool truncate = (vn->getSize() > param->getSize());
+  PcodeOp *newop = data.newOp(truncate ? 2 : 1,op->getAddr());
+  data.opSetOpcode(newop,truncate ? CPUI_SUBPIECE : CPUI_INT_ZEXT);
   Varnode *newout = data.newUniqueOut(param->getSize(),newop);
   // Its possible vn is free, in which case the SetInput would give it multiple descendants
   // See we construct a new version
   if (vn->isFree() && !vn->isConstant() && !vn->hasNoDescend())
     vn = data.newVarnode(vn->getSize(),vn->getAddr());
   data.opSetInput(newop,vn,0);
-  data.opSetInput(newop,data.newConstant(4,0),1);
+  if (truncate)
+    data.opSetInput(newop,data.newConstant(4,0),1);
   data.opInsertBefore(newop,op);
+  if (!truncate && !vn->isConstant()) {
+    // If the smaller Varnode is not the least significant part of the parameter storage, shift it into place
+    int4 lsbOffset = 0;
+    const Address &paramAddr( param->getAddress() );
+    if (vn->getSpace() == paramAddr.getSpace()) {
+      uintb vnOff = vn->getOffset();
+      uintb paramOff = paramAddr.getOffset();
+      if (vnOff >= paramOff && vnOff + vn->getSize() <= paramOff + param->getSize()) {
+	if (paramAddr.isBigEndian())
+	  lsbOffset = (int4)((paramOff + param->getSize()) - (vnOff + vn->getSize()));
+	else
+	  lsbOffset = (int4)(vnOff - paramOff);
+      }
+    }
+    if (lsbOffset != 0) {
+      PcodeOp *shiftop = data.newOp(2,op->getAddr());
+      data.opSetOpcode(shiftop,CPUI_INT_LEFT);
+      Varnode *shiftout = data.newUniqueOut(param->getSize(),shiftop);
+      data.opSetInput(shiftop,newout,0);
+      data.opSetInput(shiftop,data.newConstant(4,8*lsbOffset),1);
+      data.opInsertBefore(shiftop,op);
+      newout = shiftout;
+    }
+  }
   return newout;
 }
 

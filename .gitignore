@@ -90,3 +90,6 @@ core.*
 __pycache__
 
 gradle.lockfile
+# SH-2E/SH7058 work: vendor manuals and ROM images stay local
+sh-2e/*.pdf
+sh-2e/*.bin

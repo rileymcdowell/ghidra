@@ -1,0 +1,25 @@
+<decompilertest>
+<binaryimage arch="SuperH:BE:32:SH-2E:default">
+<!--
+  SH-2E: a float spilled to the stack is reloaded into two registers and compared with itself
+  (fcmp/eq fr3,fr2), the isnan idiom.  x f== x is false for a NaN, so it must become !NAN(x), not true.
+     add #-4,r15; fmov.s fr4,@r15; fmov.s @r15,fr3; fmov.s @r15,fr2; fcmp/eq fr3,fr2; bt L
+     fldi1 fr3; fmov.s fr3,@r15
+  L: fmov.s @r15,fr0; rts; add #4,r15
+-->
+<bytechunk space="ram" offset="0x1000" readonly="true">
+7ffcff4af3f8f2f8f2348901f39dff3a
+f0f8000b7f04
+</bytechunk>
+<symbol space="ram" offset="0x1000" name="selfcompare"/>
+</binaryimage>
+<script>
+  <com>lo fu selfcompare</com>
+  <com>dec</com>
+  <com>print C</com>
+  <com>quit</com>
+</script>
+<stringmatch name="Float self-compare #1" min="1" max="1">NAN\(param_1\)</stringmatch>
+<stringmatch name="Float self-compare #2" min="1" max="1">= 1\.0;</stringmatch>
+<stringmatch name="Float self-compare #3" min="0" max="0">unreachable</stringmatch>
+</decompilertest>
